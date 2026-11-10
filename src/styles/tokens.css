@@ -1,0 +1,67 @@
+:root {
+  --bg: #161e1b;
+  --bg-deep: #0b100e;
+  --surface: #222d29;
+  --surface-2: #1f2a26;
+  --line: #37443f;
+  --border: #4a5852;
+  --text: #f2f5f1;
+  --text-muted: #a9b6b0;
+  --effort: #6fe0cc;
+  --transition: #ffb27a;
+  --on-accent: #0b100e;
+  --danger: #ff9a8b;
+
+  --font-title: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --radius-s: 14px;
+  --radius-m: 20px;
+  --radius-l: 28px;
+  --touch: 52px;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-title);
+  font-weight: 600;
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

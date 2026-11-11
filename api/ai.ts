@@ -91,7 +91,11 @@ async function ask(k: string, base: string, mdl: string, content: Part[], maxTok
 export interface Found { start: number; end: number; name: string; cue: string }
 export interface Label { id: string; name: string; cue: string }
 
-export function parseFound(text: string, duration: number): Found[] {
+/** Certains modèles écrivent leur raisonnement entre <think> et </think> avant la réponse : on l'ignore. */
+const answerOf = (text: string) => text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<think>[\s\S]*$/i, '')
+
+export function parseFound(rawText: string, duration: number): Found[] {
+  const text = answerOf(rawText)
   const m = text.match(/\[[\s\S]*\]/)
   if (!m) return []
   try {
@@ -105,7 +109,8 @@ export function parseFound(text: string, duration: number): Found[] {
   }
 }
 
-export function parseLabels(text: string, ids: string[]): Label[] {
+export function parseLabels(rawText: string, ids: string[]): Label[] {
+  const text = answerOf(rawText)
   const m = text.match(/\[[\s\S]*\]/)
   if (!m) return []
   try {
@@ -186,7 +191,7 @@ export default async function handler(req: Req, res: Res): Promise<void> {
       content.push({ type: 'text', text: `Planche ${i + 1}, instants : ${s.times.map((t) => Math.round(t)).join(', ')} s.` })
       content.push(jpeg(s.image))
     })
-    const r = await ask(k, p.base, mdl, content, 3000)
+    const r = await ask(k, p.base, mdl, content, 6000)
     return r.ok ? res.status(200).json({ exercises: parseFound(r.text, body.duration) }) : res.status(502).json({ error: r.error })
   }
   if (task === 'labels') {
@@ -199,7 +204,7 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         `et une consigne de ${CUE_MAX} caractères au plus. Réponds uniquement par un tableau JSON : [{"id":"…","name":"…","cue":"…"}].`,
     }]
     for (const s of segs) { content.push({ type: 'text', text: `Segment ${s.id} :` }); content.push(jpeg(s.image)) }
-    const r = await ask(k, p.base, mdl, content, 1500)
+    const r = await ask(k, p.base, mdl, content, 4000)
     return r.ok ? res.status(200).json({ labels: parseLabels(r.text, segs.map((s) => s.id)) }) : res.status(502).json({ error: r.error })
   }
   return res.status(400).json({ error: 'Requête invalide.' })

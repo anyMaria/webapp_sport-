@@ -29,6 +29,7 @@ describe('lecture des réponses', () => {
     const text = 'Voici : [{"start":-2,"end":30,"name":" Chat-vache ","cue":"Dos rond"},{"start":40,"end":40.2,"name":"Trop court"},{"start":50,"end":999,"name":"Fente","cue":""},{"start":"x","end":3,"name":"Faux"}]'
     expect(parseFound(text, 120)).toEqual([{ start: 0, end: 30, name: 'Chat-vache', cue: 'Dos rond' }, { start: 50, end: 120, name: 'Fente', cue: '' }])
     expect(parseFound('désolé', 100)).toEqual([])
+    expect(parseFound('<think>je pense à [1, 2] et à [3]</think>[{"start":0,"end":20,"name":"Pont"}]', 60)).toEqual([{ start: 0, end: 20, name: 'Pont', cue: '' }])
   })
   it('noms : ignore les identifiants inconnus', () => {
     expect(parseLabels('[{"id":"a","name":"Pont","cue":"x"},{"id":"zz","name":"Autre"}]', ['a'])).toEqual([{ id: 'a', name: 'Pont', cue: 'x' }])

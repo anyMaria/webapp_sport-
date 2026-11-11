@@ -78,6 +78,15 @@ describe('api/ai avec un service', () => {
     expect((await t.call('GET')).json).toMatchObject({ model: 'meta-llama/llama-4-maverick-17b-128e-instruct' })
   })
 
+  it('modèle choisi dans Vercel : utilisé d\'abord ; s\'il est retiré, un modèle de la liste prend le relais', async () => {
+    const ok = await setup({ GROCK_API: 'gsk_abc', XAI_MODEL: 'mon-modele' }, () => ({ status: 200, body: GOOD }))
+    expect((await ok.call('POST', marks)).status).toBe(200)
+    expect(ok.chats()[0]!.body!.model).toBe('mon-modele')
+    const t = await setup({ GROCK_API: 'gsk_abc', XAI_MODEL: 'ancien-modele' }, (b) => (b.model === 'ancien-modele' ? { status: 404, body: { error: { message: 'The model `ancien-modele` does not exist' } } } : { status: 200, body: GOOD }))
+    expect((await t.call('POST', marks)).status).toBe(200)
+    expect(t.chats().map((c) => c.body!.model)).toEqual(['ancien-modele', 'meta-llama/llama-4-scout-17b-16e-instruct'])
+  })
+
   it('service saturé : code 429 et délai transmis à l\'app', async () => {
     const t = await setup({ GROCK_API: 'gsk_abc' }, () => ({ status: 429, headers: { 'retry-after': '12' }, body: { error: { message: 'Rate limit reached' } } }))
     const r = await t.call('POST', marks)

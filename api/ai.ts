@@ -96,14 +96,17 @@ async function listModels(k: string, base: string): Promise<ModelList> {
     return { ok: false, ids: [], status: 0 }
   }
 }
+/** Modèles à essayer, dans l'ordre : celui choisi dans Vercel s'il y en a un, puis ceux reconnus dans la liste du service (en secours s'il est refusé). */
 async function models(k: string, p: { name: string; base: string }): Promise<string[]> {
   const set = isGemini(k) ? firstEnv(['GEMINI_MODEL']) : firstEnv(MODEL_NAMES)
-  if (set) return [set]
-  const known = discovered[p.base]
-  if (known) return known
-  const l = await listModels(k, p.base)
-  if (!l.ok) return [] // pas mémorisé : on réessaiera
-  return (discovered[p.base] = candidatesFor(p.name, l.ids))
+  let found = discovered[p.base]
+  if (!found) {
+    const l = await listModels(k, p.base)
+    if (l.ok) found = discovered[p.base] = candidatesFor(p.name, l.ids)
+    else if (set) found = discovered[p.base] = [] // liste refusée : on s'en tient au modèle choisi, sans redemander à chaque fois
+  }
+  if (set) return [set, ...(found ?? []).filter((m) => m !== set)].slice(0, MAX_CANDIDATES + 1)
+  return found ?? []
 }
 
 type Part = { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }

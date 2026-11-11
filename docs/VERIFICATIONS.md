@@ -182,9 +182,11 @@ Déjà vérifié : 18 tests de contraste sur toutes les paires texte/fond, 3 tes
 
 ## Phase 13 : interface plus claire, coupes à glisser, IA avec Groq
 
-Vérifié par moi (navigateur d'ordinateur, écran tactile simulé à la taille d'un iPad, faux service d'IA) : parcours complet de l'accueil vide à la séance prête ; glissement d'un trait à la souris et au doigt simulé ; réglage par boutons et au clavier ; zoom ; brouillon repris après rechargement ; repérage IA sur une vidéo de test de 30 s (6 exercices retrouvés aux bons instants, pause du service gérée) ; 193 tests ; construction de production ; fonction serveur compilée aussi avec des réglages non stricts.
+Vérifié par moi (navigateur d'ordinateur, écran tactile simulé à la taille d'un iPad, faux service d'IA) : parcours complet de l'accueil vide à la séance prête ; glissement d'un trait à la souris et au doigt simulé ; réglage par boutons et au clavier ; zoom ; brouillon repris après rechargement ; repérage IA sur une vidéo de test de 30 s (6 exercices retrouvés aux bons instants, pause du service gérée) ; 194 tests ; construction de production ; fonction serveur compilée aussi avec des réglages non stricts.
 
 Pas vérifié : le vrai service Groq (hors du réseau de ma session), et tout ce qui dépend du doigt et de Safari sur l'iPad.
+
+Attention : la clé de l'IA n'est réglée dans Vercel que pour l'app habituelle (« Production »). Sur l'adresse d'aperçu, les lignes 13.8 et 13.9 ne peuvent pas se tester tant que la clé n'y est pas ; et tes vidéos déjà importées n'y apparaissent pas (il faut en réimporter une).
 
 | # | À faire sur l'iPad | Attendu |
 |---|---|---|

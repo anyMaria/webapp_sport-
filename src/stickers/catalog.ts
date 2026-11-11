@@ -28,8 +28,10 @@ export interface SeriesDef {
 const week: Unlock = { kind: 'week' }
 
 export const SERIES: SeriesDef[] = [
-  { id: 'ciel-nuit', name: 'Ciel de nuit', condition: () => 'Une semaine validée' },
-  { id: 'rituels', name: 'Petits rituels', condition: () => 'Une semaine validée' },
+  { id: 'ciel-nuit', name: 'Ciel de nuit', condition: () => 'Une pochette' },
+  { id: 'rituels', name: 'Petits rituels', condition: () => 'Une pochette' },
+  { id: 'energie', name: 'Énergie', condition: () => 'Une pochette' },
+  { id: 'jardin', name: 'Jardin', condition: () => 'Une pochette' },
   { id: 'pierres', name: 'Pierres', condition: (s) => (s.unlock.kind === 'streak' ? `${s.unlock.weeks} semaines d'affilée` : '') },
   {
     id: 'bonus', name: 'Bonus',
@@ -61,6 +63,24 @@ export const STICKERS: StickerDef[] = [
   c('gourde', 'Gourde', 'rituels'),
   c('chat-etire', 'Chat qui s\'étire', 'rituels'),
 
+  c('eclair', 'Éclair', 'energie'),
+  c('flamme', 'Flamme', 'energie'),
+  c('fusee', 'Fusée', 'energie'),
+  c('soleil', 'Soleil', 'energie'),
+  c('etoile', 'Étoile', 'energie'),
+  c('coeur', 'Cœur', 'energie'),
+  c('diamant', 'Diamant', 'energie'),
+  c('trophee', 'Trophée', 'energie'),
+
+  c('fleur', 'Fleur', 'jardin'),
+  c('feuille', 'Feuille', 'jardin'),
+  c('goutte', 'Goutte', 'jardin'),
+  c('papillon', 'Papillon', 'jardin'),
+  c('champignon', 'Champignon', 'jardin'),
+  c('cactus', 'Cactus', 'jardin'),
+  c('arcenciel', 'Arc-en-ciel', 'jardin'),
+  c('nuage', 'Nuage', 'jardin'),
+
   { id: 'pierre-de-lune', name: 'Pierre de lune', series: 'pierres', rarity: 'rare', unlock: { kind: 'streak', weeks: 4 } },
   { id: 'amethyste', name: 'Améthyste', series: 'pierres', rarity: 'rare', unlock: { kind: 'streak', weeks: 8 } },
   { id: 'labradorite', name: 'Labradorite', series: 'pierres', rarity: 'rare', unlock: { kind: 'streak', weeks: 12 } },
@@ -74,7 +94,7 @@ export const STICKERS: StickerDef[] = [
 
 export const stickerById = new Map(STICKERS.map((s) => [s.id, s]))
 
-/** Stickers tirés au hasard à chaque semaine validée. */
+/** Stickers tirés au hasard à chaque pochette (semaine validée ou séances). */
 export const WEEKLY_POOL = STICKERS.filter((s) => s.unlock.kind === 'week').map((s) => s.id)
 
 /** Identifiant d'un doublon « brillant » : même dessin, finition dorée. */

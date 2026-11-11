@@ -156,7 +156,7 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
     const counted = sessionCounts(session)
     return (
       <main className={s.end}>
-        <h1 style={{ fontSize: 34 }}>{session.partial ? 'Séance arrêtée' : 'Séance terminée'}</h1>
+        <h1 style={{ fontSize: 34 }}>{session.partial ? 'Séance arrêtée' : 'Bravo, séance terminée !'}</h1>
         <div className={s.stats}>
           <div className={s.stat}><span className={s.statNum}>{fmt(session.activeMs)}</span><span className={s.hint}>durée active</span></div>
           <div className={s.stat}><span className={s.statNum}>{session.partial ? Math.min(cur + 1, plan.items.length) : plan.items.length}</span><span className={s.hint}>exercices</span></div>
@@ -170,13 +170,13 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
         </p>
         {(() => {
           const wk = mot.result.current.key
-          const pouch = unlocks.find((u) => u.reason === 'week' && u.weekKey === wk && !u.revealed)
+          const pouch = unlocks.filter((u) => !u.revealed && (u.reason === 'session' || (u.reason === 'week' && u.weekKey === wk))).sort((a, b) => a.unlockedAt.localeCompare(b.unlockedAt))[0]
           return (
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              {pouch && mot.result.current.validated && <Button variant="primary" onClick={() => setShowPouch(true)} style={{ minHeight: 64, fontSize: 20 }}>Ouvrir ma pochette</Button>}
-              <Button variant={pouch && mot.result.current.validated ? 'secondary' : 'primary'} onClick={() => nav('/')} style={{ minHeight: 64, fontSize: 20 }}>Terminer</Button>
+              {pouch && <Button variant="primary" onClick={() => setShowPouch(true)} style={{ minHeight: 64, fontSize: 20 }}>Ouvrir ma pochette</Button>}
+              <Button variant={pouch ? 'secondary' : 'primary'} onClick={() => nav('/')} style={{ minHeight: 64, fontSize: 20 }}>Terminer</Button>
               {showPouch && pouch && (
-                <PouchReveal stickerId={pouch.stickerId} volume={settings.beepVolume} onDone={(opened) => { if (opened) void markRevealed(pouch.stickerId); setShowPouch(false) }} />
+                <PouchReveal stickerId={pouch.stickerId} message={pouch.reason === 'session' ? 'Séance terminée.' : 'Semaine validée.'} volume={settings.beepVolume} onDone={(opened) => { if (opened) void markRevealed(pouch.stickerId); setShowPouch(false) }} />
               )}
             </div>
           )

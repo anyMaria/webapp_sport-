@@ -59,8 +59,9 @@ export interface SessionLog {
 
 export interface StickerUnlock {
   stickerId: string
-  reason: 'week' | 'milestone' | 'bonus'
+  reason: 'week' | 'session' | 'milestone' | 'bonus'
   weekKey?: string // semaine ISO, ex. "2026-W46"
+  sessionNo?: number // numéro de la pochette de séance (reason = "session")
   unlockedAt: string
   revealed: boolean // false tant que la pochette n'est pas ouverte
 }

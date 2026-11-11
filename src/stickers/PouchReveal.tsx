@@ -18,12 +18,15 @@ export interface PouchRevealProps {
   slotRect?: () => DOMRect | null
   /** Agrandissement d'un sticker déjà obtenu : pas de pochette, le miroitement se rejoue. */
   zoomOnly?: boolean
+  /** Début de la phrase sous la pochette (« Semaine validée. » par défaut). */
+  message?: string
 }
 
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /** Pochette scellée → appui maintenu 1,2 s → ouverture → apparition → miroitement → collage. 6 secondes au plus après le geste. */
-export function PouchReveal({ stickerId, volume, onDone, slotRect, zoomOnly }: PouchRevealProps) {
+export function PouchReveal(props: PouchRevealProps) {
+  const { stickerId, volume, onDone, slotRect, zoomOnly } = props
   const [stage, setStage] = useState<Stage>(zoomOnly ? 'revealed' : 'sealed')
   const stageRef = useRef<Stage>(zoomOnly ? 'revealed' : 'sealed')
   const goto = (st: Stage) => { stageRef.current = st; setStage(st) }
@@ -253,7 +256,7 @@ export function PouchReveal({ stickerId, volume, onDone, slotRect, zoomOnly }: P
 
       {sealed ? (
         <>
-          <p className={s.msg}>Semaine validée. Maintiens pour ouvrir.</p>
+          <p className={s.msg}>{props.message ?? 'Semaine validée.'} Maintiens pour ouvrir.</p>
           <button type="button" className={[s.cta, s.ctaGhost].join(' ')} disabled={stage !== 'sealed'} onClick={() => { void unlockAudio(); void askOrientation(); open() }}>Ouvrir</button>
         </>
       ) : (

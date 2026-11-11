@@ -10,13 +10,13 @@ const base = (extra: Partial<UnlockInput> = {}): UnlockInput => ({ validatedWeek
 const own = (...ids: string[]): StickerUnlock[] => ids.map((stickerId) => ({ stickerId, reason: 'week', weekKey: `w-${stickerId}`, unlockedAt: 'x', revealed: true }))
 
 describe('catalogue', () => {
-  it('24 stickers : 8 + 8 + 5 + 3, tous avec un dessin', () => {
-    expect(STICKERS).toHaveLength(24)
+  it('40 stickers : 8 + 8 + 8 + 8 + 5 + 3, tous avec un dessin', () => {
+    expect(STICKERS).toHaveLength(40)
     const count = (s: string) => STICKERS.filter((x) => x.series === s).length
-    expect([count('ciel-nuit'), count('rituels'), count('pierres'), count('bonus')]).toEqual([8, 8, 5, 3])
-    expect(WEEKLY_POOL).toHaveLength(16)
+    expect([count('ciel-nuit'), count('rituels'), count('energie'), count('jardin'), count('pierres'), count('bonus')]).toEqual([8, 8, 8, 8, 5, 3])
+    expect(WEEKLY_POOL).toHaveLength(32)
     expect(STICKERS.every((s) => artUrl(s.id).length > 0)).toBe(true)
-    expect(new Set(STICKERS.map((s) => s.id)).size).toBe(24)
+    expect(new Set(STICKERS.map((s) => s.id)).size).toBe(40)
   })
   it('chaque série a une condition lisible pour ses emplacements vides', () => {
     for (const ser of SERIES) for (const s of STICKERS.filter((x) => x.series === ser.id)) expect(ser.condition(s).length).toBeGreaterThan(0)
@@ -28,8 +28,8 @@ describe('catalogue', () => {
 
 describe('tirage hebdomadaire', () => {
   it('ne tire que des stickers pas encore obtenus', () => {
-    const owned = new Set(WEEKLY_POOL.slice(0, 15))
-    expect(drawWeekly(owned, seq(0.5))).toBe(WEEKLY_POOL[15])
+    const owned = new Set(WEEKLY_POOL.slice(0, WEEKLY_POOL.length - 1))
+    expect(drawWeekly(owned, seq(0.5))).toBe(WEEKLY_POOL[WEEKLY_POOL.length - 1])
   })
   it('tous obtenus : doublon brillant, puis brillants numérotés', () => {
     const all = new Set(WEEKLY_POOL)
@@ -72,5 +72,20 @@ describe('déblocages', () => {
   })
   it('comptage des stickers distincts', () => {
     expect(distinctOwned(own('saturne', 'saturne:brillant', 'bougie'))).toBe(2)
+  })
+})
+
+describe('pochettes de séance', () => {
+  it('une pochette par séance au début, sans doublon sur un second appel', () => {
+    const first = evaluateUnlocks(base({ countedSessions: 3, rng: seq(0.1, 0.5, 0.9) }))
+    expect(first.filter((u) => u.reason === 'session').map((u) => u.sessionNo)).toEqual([1, 2, 3])
+    expect(new Set(first.map((u) => u.stickerId)).size).toBe(3)
+    expect(evaluateUnlocks(base({ countedSessions: 3, owned: first }))).toEqual([])
+  })
+  it('plus rare ensuite : 6 séances = 5 pochettes, 7 = toujours 5, 8 = 6', () => {
+    const five = evaluateUnlocks(base({ countedSessions: 6, rng: seq(0.1, 0.5, 0.9, 0.3, 0.7) }))
+    expect(five).toHaveLength(5)
+    expect(evaluateUnlocks(base({ countedSessions: 7, owned: five }))).toEqual([])
+    expect(evaluateUnlocks(base({ countedSessions: 8, owned: five }))).toHaveLength(1)
   })
 })

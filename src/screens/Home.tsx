@@ -6,6 +6,7 @@ import { db } from '../data/db'
 import { Thumb } from '../library/Thumb'
 import { formatDuration, workoutDurationSec } from '../library/workouts'
 import { composeExpress } from '../motivation/express'
+import { sessionsUntilNextPouch } from '../stickers/schedule'
 import { remainingThisWeek, weekDays } from '../motivation/streak'
 import { streakMessage, useMotivation } from '../motivation/useMotivation'
 import { originText, type Exercise, type VideoSource, type Workout } from '../data/types'
@@ -22,6 +23,8 @@ export function Home() {
   const workouts = useLiveQuery(() => db.workouts.orderBy('updatedAt').reverse().toArray(), []) ?? (NONE as Workout[])
   const exercises = useLiveQuery(() => db.exercises.toArray(), []) ?? (NONE as Exercise[])
   const sources = useLiveQuery(() => db.sources.toArray(), []) ?? (NONE as VideoSource[])
+  const countedTotal = (useLiveQuery(() => db.sessionLogs.toArray(), []) ?? []).filter((l) => l.counted).length
+  const untilPouch = sessionsUntilNextPouch(countedTotal)
   const unrevealed = (useLiveQuery(() => db.stickerUnlocks.toArray(), []) ?? []).filter((u) => !u.revealed).length
 
   const exById = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises])
@@ -37,9 +40,11 @@ export function Home() {
 
   const slotToday = settings.slot.days.includes(now.getDay())
   const nextSlotDay = [1, 2, 3, 4, 5, 6, 7].map((i) => (now.getDay() + i) % 7).find((d) => settings.slot.days.includes(d))
-  const greeting = `${now.getHours() < 18 ? 'Bonjour' : 'Bonsoir'}${settings.userName.trim() ? ` ${settings.userName.trim()}` : ''}`
+  const hello = now.getHours() < 18 ? 'Bonjour' : 'Bonsoir'
+  const who = settings.userName.trim()
+  const greeting = who ? `${hello} ${who}, prête pour ta séance ?` : `${hello}, prête pour ta séance ?`
   const slotLine = slotToday
-    ? `Ton créneau du jour est à ${hhmm(settings.slot.time)}. Tout est prêt.`
+    ? `C'est ton jour ! Ton créneau est à ${hhmm(settings.slot.time)}. On y va ?`
     : nextSlotDay !== undefined ? `Prochain créneau : ${DAYS[nextSlotDay]} à ${hhmm(settings.slot.time)}.` : 'Choisis tes jours de créneau dans « Mon rythme ».'
   const msg = streakMessage(result)
   const left = remainingThisWeek(result, settings.weeklyGoal)
@@ -58,7 +63,7 @@ export function Home() {
         <div className={h.pills}>
           {unrevealed > 0 && <Link to="/collection" className={[h.pill, h.pillGlow].join(' ')}>Une pochette t'attend</Link>}
           <Link to="/mon-rythme" className={h.pill}>
-            <Flame size={20} color="var(--transition)" aria-hidden="true" />
+            <Flame size={20} color="var(--transition)" aria-hidden="true" style={{ animation: result.streak > 0 ? 'wiggle 2.8s ease-in-out infinite' : undefined, transformOrigin: '50% 90%' }} />
             <span>{result.streak > 0 ? `${result.streak} semaine${result.streak > 1 ? 's' : ''} d'affilée` : 'Mon rythme'}</span>
           </Link>
           <Link to="/videos" className={h.pillStrong}><Film size={20} aria-hidden="true" />Mes vidéos</Link>
@@ -107,7 +112,7 @@ export function Home() {
             </div>
             <div>
               <div className={h.track} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progression de la semaine"><div className={h.fill} style={{ width: `${pct}%` }} /></div>
-              <span className={h.hint}>{left === 0 ? 'Semaine validée.' : `Prochaine pochette dans ${left} séance${left > 1 ? 's' : ''}`}</span>
+              <span className={h.hint}>{left === 0 ? 'Semaine validée. ' : ''}{untilPouch === 1 ? 'Ta prochaine pochette : à la prochaine séance !' : `Prochaine pochette dans ${untilPouch} séances`}</span>
             </div>
           </div>
         </section>

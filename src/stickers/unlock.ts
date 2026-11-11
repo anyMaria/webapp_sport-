@@ -1,4 +1,5 @@
 import type { StickerUnlock } from '../data/types'
+import { pouchesEarned } from './schedule'
 import { SHINY_SUFFIX, STICKERS, WEEKLY_POOL, baseIdOf, type BonusEvent } from './catalog'
 
 export interface UnlockFlags {
@@ -10,6 +11,8 @@ export interface UnlockFlags {
 export interface UnlockInput {
   /** Semaines validées par leurs séances (joker exclu), clés ISO. */
   validatedWeeks: string[]
+  /** Séances comptées depuis le début (rythme des pochettes de séance). */
+  countedSessions?: number
   /** Série en cours, pour les paliers. */
   streak: number
   owned: StickerUnlock[]
@@ -35,6 +38,7 @@ export function drawWeekly(ownedIds: Set<string>, rng: () => number): string {
 /**
  * Déblocages dus, à écrire (non révélés). Idempotent : appelé plusieurs fois avec le résultat déjà écrit, ne renvoie rien.
  * - Chaque semaine validée donne une pochette (une seule par semaine).
+ * - Les séances comptées donnent des pochettes de plus en plus rares (voir schedule.ts).
  * - Les pierres se débloquent aux paliers de série (4, 8, 12, 26, 52 semaines).
  * - Les bonus se débloquent au premier événement.
  */
@@ -49,6 +53,12 @@ export function evaluateUnlocks(inp: UnlockInput): StickerUnlock[] {
     const id = drawWeekly(ownedIds, inp.rng)
     ownedIds.add(id)
     out.push({ stickerId: id, reason: 'week', weekKey: wk, unlockedAt: iso, revealed: false })
+  }
+  const sessionPouches = inp.owned.filter((u) => u.reason === 'session').length
+  for (let k = sessionPouches + 1; k <= pouchesEarned(inp.countedSessions ?? 0); k++) {
+    const id = drawWeekly(ownedIds, inp.rng)
+    ownedIds.add(id)
+    out.push({ stickerId: id, reason: 'session', sessionNo: k, unlockedAt: iso, revealed: false })
   }
   for (const s of STICKERS) {
     if (ownedIds.has(s.id)) continue

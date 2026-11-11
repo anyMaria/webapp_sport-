@@ -29,7 +29,7 @@ export async function syncUnlocks(now = new Date()): Promise<StickerUnlock[]> {
   const result = computeStreak(logs, jokers, { weeklyGoal: settings.weeklyGoal, jokersPerMonth: settings.jokersPerMonth, now })
   return db.transaction('rw', db.stickerUnlocks, async () => {
     const owned = await db.stickerUnlocks.toArray()
-    const fresh = evaluateUnlocks({ validatedWeeks: result.validatedWeeks, streak: result.streak, owned, flags, rng, now })
+    const fresh = evaluateUnlocks({ validatedWeeks: result.validatedWeeks, countedSessions: logs.filter((l) => l.counted).length, streak: result.streak, owned, flags, rng, now })
     if (fresh.length) await db.stickerUnlocks.bulkPut(fresh)
     return fresh
   })

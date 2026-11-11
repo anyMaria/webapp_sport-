@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { customEquipment, equipmentText, NO_EQUIPMENT, toggleEquipment } from './equipment'
+import { customEquipment, equipmentText, mergeEquipment, NO_EQUIPMENT, toggleEquipment } from './equipment'
 
 describe('équipement d\'une séance', () => {
   it('ajoute et retire', () => {
@@ -21,5 +21,13 @@ describe('équipement d\'une séance', () => {
   })
   it('raccourcis : équipements écrits ailleurs, sans doublon ni choix courant', () => {
     expect(customEquipment([['Tapis', 'Blocs de yoga'], undefined, ['tapis', 'Haltères']])).toEqual(['Haltères', 'Tapis'])
+  })
+})
+
+describe('équipement d\'une séance, d\'après ses vidéos', () => {
+  it('réunit sans doublon ; « Sans équipement » s\'efface devant un vrai équipement', () => {
+    expect(mergeEquipment([['Bandes élastiques'], [NO_EQUIPMENT], undefined, ['bandes élastiques', 'Blocs de yoga']])).toEqual(['Bandes élastiques', 'Blocs de yoga'])
+    expect(mergeEquipment([[NO_EQUIPMENT], [NO_EQUIPMENT]])).toEqual([NO_EQUIPMENT])
+    expect(mergeEquipment([undefined, []])).toEqual([])
   })
 })

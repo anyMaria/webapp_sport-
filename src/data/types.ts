@@ -14,6 +14,8 @@ export interface VideoSource {
   youtubeId?: string // kind = "youtube"
   author?: string // créateur de la vidéo YouTube
   thumbId?: string // vignette de la vidéo (fichiers), pour la reconnaître dans les listes
+  /** Ce qu'il faut pour suivre cette vidéo : « Sans équipement », « Bandes élastiques », « Blocs de yoga » ou un texte libre. */
+  equipment?: string[]
   /** Découpage en cours, enregistré tout seul (brouillon). Effacé à l'enregistrement des exercices. */
   draftSegs?: Segment[]
   createdAt: string
@@ -42,8 +44,6 @@ export interface Workout {
   name: string
   items: WorkoutItem[]
   isExpress: boolean
-  /** Ce qu'il faut sortir avant la séance : « Sans équipement », « Bandes élastiques », « Blocs de yoga » ou un texte libre. */
-  equipment?: string[]
   createdAt: string
   updatedAt: string
 }

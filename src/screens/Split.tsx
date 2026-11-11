@@ -1,28 +1,24 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check, ChevronDown, ChevronLeft, FastForward, ListOrdered, Merge, Pause, Play, Rewind, RotateCcw, Scissors, Sparkles, Timer, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ChevronRight, FastForward, ListOrdered, Merge, Pause, Play, Rewind, RotateCcw, Scissors, Sparkles, Timer, Trash2 } from 'lucide-react'
 import { db, loadSettings } from '../data/db'
-import { speechFor } from '../engine/session'
 import type { VideoSource } from '../data/types'
 import { useOpfsUrl } from '../video/useOpfsUrl'
-import { saveSegments } from '../import/saveExercises'
 import {
-  clampCue, CUE_MAX, durationOf, fillGaps, formatTime, keptSegments, mergeWithNext, MIN_SEGMENT_SEC, moveBoundary, renumber, splitAt, wholeVideo, type Segment,
+  durationOf, fillGaps, formatTime, keptSegments, mergeWithNext, MIN_SEGMENT_SEC, moveBoundary, renumber, splitAt, wholeVideo, type Segment,
 } from '../import/segments'
 import { Screen } from '../app/Screen'
 import { Steps } from '../app/Steps'
 import { createYTPlayer, fetchYouTubeChapters, youtubeChaptersEnabled, type YTPlayer } from '../video/youtube'
 import { parseChapters } from '../import/chapters'
-import { rhythmBoundaries } from '../import/detect/rhythm'
-import { mergeCandidates } from '../import/detect/merge'
+import { rhythmSegments } from '../import/detect/rhythm'
 import { Timeline } from '../import/Timeline'
 import { Stepper } from '../ui/Stepper'
 import { getVideoFile } from '../data/opfs'
 import { aiStatus, type AiStatus } from '../import/aiClient'
 import { buildSegments, PER_SHEET, requestMarks, sampleSheets, sheetCount, snapBoundaries } from '../import/aiSegments'
 import { analyzeShots } from '../import/detect/shots'
-import { extractFrames, requestLabels, type Label } from '../import/aiLabels'
 import { Button, IconButton } from '../ui/Button'
 import ui from '../ui/ui.module.css'
 import c from '../import/import.module.css'
@@ -98,9 +94,6 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [rhythmStart, setRhythmStart] = useState(0)
   const [progress, setProgress] = useState<{ label: string; ratio: number | null } | null>(null)
   const [notes, setNotes] = useState<string[]>([])
-  const [aiBusy, setAiBusy] = useState(false)
-  const [aiProposals, setAiProposals] = useState<Label[] | null>(null)
-  const [aiError, setAiError] = useState<string | null>(null)
   const [aiInfo, setAiInfo] = useState<AiStatus | null>(null) // null : vérification en cours
   /** Langue des annonces : celle des noms proposés par l'IA et de la phrase affichée en exemple. */
   const lang = useLiveQuery(() => loadSettings(), [])?.voiceLang ?? 'en'
@@ -135,6 +128,18 @@ function SplitEditor({ source }: { source: VideoSource }) {
 
   const start = sel?.startSec
   const end = sel?.endSec
+
+  // La ligne de la partie sélectionnée reste visible dans la liste (seule la liste défile, jamais la page).
+  const listEl = useRef<HTMLElement>(null)
+  const rowEls = useRef(new Map<string, HTMLDivElement>())
+  useEffect(() => {
+    const box = listEl.current
+    const row = rowEls.current.get(selId)
+    if (!box || !row) return
+    const top = row.offsetTop - box.offsetTop
+    if (top < box.scrollTop) box.scrollTop = top - 8
+    else if (top + row.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = top + row.offsetHeight - box.clientHeight + 8
+  }, [selId])
 
   // YouTube : lecteur visible et piloté, créé une seule fois.
   useEffect(() => {
@@ -173,6 +178,11 @@ function SplitEditor({ source }: { source: VideoSource }) {
           const on = p.getPlayerState() === 1
           setPlaying(on)
           if (on || settled) setPos(p.getCurrentTime())
+          if (on) {
+            const t = p.getCurrentTime()
+            const host = segsRef.current.find((x) => t >= x.startSec && t < x.endSec)
+            if (host) setSelId(host.id)
+          }
         } catch { /* pas prêt */ }
       } else if (video.current) {
         const v = video.current
@@ -337,33 +347,14 @@ function SplitEditor({ source }: { source: VideoSource }) {
     }
   }
 
-  const runAiNames = async () => {
-    if (!source.opfsPath) return
-    setAiBusy(true); setAiError(null)
-    const ctl = new AbortController()
-    abort.current = ctl
-    try {
-      const file = await getVideoFile(source.opfsPath)
-      const frames = await extractFrames(file, keptSegments(segs), ctl.signal)
-      const labels = await requestLabels(frames, lang, ctl.signal)
-      if (!labels.length) setAiError("L'IA n'a rien proposé. Nomme les exercices à la main.")
-      else setAiProposals(labels)
-    } catch (e) {
-      if ((e as Error).name !== 'AbortError') setAiError((e as Error).message || "Le nommage par l'IA a échoué.")
-    } finally {
-      setAiBusy(false)
-    }
-  }
-
   const patch = (id: string, p: Partial<Segment>) => setSegs((l) => l.map((x) => (x.id === id ? { ...x, ...p } : x)))
   const keptCount = keptSegments(segs).length
 
-  const save = async () => {
+  /** Étape suivante : le découpage est enregistré tout de suite (brouillon), puis on passe au nommage. */
+  const next = async () => {
     setSaving(true)
-    await saveSegments(source, segs)
-    await db.sources.update(source.id, { draftSegs: undefined })
-    // Étape suivante : la séance, déjà remplie avec cette vidéo.
-    nav(`/composer/nouvelle?video=${source.id}`)
+    await db.sources.update(source.id, { draftSegs: segs })
+    nav(`/nommer/${source.id}`)
   }
 
   if (error) return <Screen title="Vidéo introuvable"><p className={s.empty}>Cette vidéo n'est plus sur l'iPad.</p></Screen>
@@ -392,8 +383,8 @@ function SplitEditor({ source }: { source: VideoSource }) {
           </div>
         </div>
         <Steps current={2} />
-        <Button variant="primary" disabled={keptCount === 0 || saving} onClick={() => void save()}>
-          {saving ? 'Enregistrement…' : `Enregistrer ${keptCount} exercice${keptCount > 1 ? 's' : ''}`}
+        <Button variant="primary" disabled={keptCount === 0 || saving} onClick={() => void next()}>
+          Suivant : nommer<ChevronRight size={20} aria-hidden="true" />
         </Button>
       </header>
 
@@ -419,11 +410,13 @@ function SplitEditor({ source }: { source: VideoSource }) {
           </div>
 
           <div className={c.transport} role="group" aria-label="Lecture">
+            <Button onClick={() => seekTo(getTime() - 10)} aria-label="Reculer de 10 secondes"><Rewind size={20} aria-hidden="true" />10 s</Button>
             <Button onClick={() => seekTo(getTime() - step)} aria-label={`Reculer de ${fmt(step)} secondes`}><Rewind size={20} aria-hidden="true" />{fmt(step)} s</Button>
             <Button variant="primary" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Lecture'}>
               {playing ? <Pause size={22} aria-hidden="true" /> : <Play size={22} aria-hidden="true" />}{playing ? 'Pause' : 'Lecture'}
             </Button>
             <Button onClick={() => seekTo(getTime() + step)} aria-label={`Avancer de ${fmt(step)} secondes`}>{fmt(step)} s<FastForward size={20} aria-hidden="true" /></Button>
+            <Button onClick={() => seekTo(getTime() + 10)} aria-label="Avancer de 10 secondes">10 s<FastForward size={20} aria-hidden="true" /></Button>
             <div className={c.speeds} role="group" aria-label="Vitesse de lecture">
               {RATES.map((r) => (
                 <button key={r} type="button" className={[c.pick, rate === r ? c.pickOn : ''].join(' ')} aria-pressed={rate === r} onClick={() => changeRate(r)}>{fmt(r)}x</button>
@@ -453,15 +446,15 @@ function SplitEditor({ source }: { source: VideoSource }) {
             ) : null}
           </Timeline>
 
-          <section className={c.list} aria-label="Exercices">
+          <section ref={listEl} className={c.list} aria-label="Exercices">
             <div className={c.listHead}>
               <span className={c.label}>Exercices · {keptCount} gardé{keptCount > 1 ? 's' : ''} sur {segs.length}</span>
-              <span className={s.sub}>Passe sur « Retiré » l'introduction et les pauses : elles ne seront pas enregistrées.</span>
+              <span className={s.sub}>Touche une partie pour la voir. Passe sur « Retiré » l'introduction et les pauses : elles ne seront pas enregistrées.</span>
             </div>
             {segs.map((x, i) => (
-              <div key={x.id} className={[c.row, !x.kept ? c.rowOff : '', x.id === selId ? c.rowSel : ''].join(' ')} onClick={() => { setCutSel(null); seekTo(x.startSec); setSelId(x.id) }}>
+              <div key={x.id} ref={(el) => { if (el) rowEls.current.set(x.id, el); else rowEls.current.delete(x.id) }} className={[c.row, !x.kept ? c.rowOff : '', x.id === selId ? c.rowSel : ''].join(' ')} onClick={() => { setCutSel(null); seekTo(x.startSec); setSelId(x.id) }}>
                 <div className={c.rowMain}>
-                  <input className={c.rowName} value={x.name} aria-label={`Nom de l'exercice ${i + 1}`} onFocus={() => setSelId(x.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(x.id, { name: e.target.value })} />
+                  <span className={c.rowName}>{x.name}</span>
                   <span className={c.rowTime}>{formatTime(x.startSec)} – {formatTime(x.endSec)} · {Math.round(durationOf(x))} s</span>
                 </div>
                 {x.verify && i < segs.length - 1 && <span className={c.verify}>Fin à vérifier</span>}
@@ -479,7 +472,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
             </Button>
             {cutMsg && <p role="alert" className={[s.msg, s.msgErr].join(' ')}>{cutMsg}</p>}
             <div role="group" aria-label="Pas d'ajustement" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span className={ui.hint}>Pas pour reculer et avancer</span>
+              <span className={ui.hint}>Pas fin pour reculer et avancer (en plus de 10 s)</span>
               <div className={c.pickRow}>
                 {STEPS.map((v) => (
                   <button key={v} type="button" className={[c.pick, step === v ? c.pickOn : ''].join(' ')} aria-pressed={step === v} onClick={() => setStep(v)}>{fmt(v)} s</button>
@@ -523,28 +516,11 @@ function SplitEditor({ source }: { source: VideoSource }) {
                     L'IA pose des repères, à toi de les ajuster ensuite sur la frise. Pour cela, environ {sheetCount(source.durationSec) * PER_SHEET} petites images de cette vidéo quittent l'iPad et sont envoyées à {aiInfo.provider ?? "un service d'IA"}. Elles ne sont pas enregistrées dans l'app.
                     {segs.length > 1 && ' Tes coupes actuelles seront remplacées.'}
                   </p>
-                  <Button variant="primary" disabled={!source.durationSec || aiBusy} onClick={() => void runAiMarks()}><Sparkles size={18} aria-hidden="true" />Envoyer les images et repérer</Button>
-                  {!aiProposals && <Button disabled={aiBusy || keptCount === 0} onClick={() => void runAiNames()}>{aiBusy ? 'Nommage en cours…' : "Nommer les exercices avec l'IA"}</Button>}
-                  {!aiProposals && <p className={ui.hint} style={{ margin: 0 }}>Le nommage garde tes coupes et envoie 3 images par exercice gardé.</p>}
-                  {aiError && <p role="alert" className={[s.msg, s.msgErr].join(' ')}>{aiError}</p>}
+                  <Button variant="primary" disabled={!source.durationSec} onClick={() => void runAiMarks()}><Sparkles size={18} aria-hidden="true" />Envoyer les images et repérer</Button>
+                  <p className={ui.hint} style={{ margin: 0 }}>Les noms se donnent à l'étape suivante, « Nommer ».</p>
                 </>
               )}
               {!isYT && notes.map((n) => <p key={n} role="status" className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
-              {aiProposals && (
-                <div role="group" aria-label="Noms proposés par l'IA" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <span className={c.label}>Noms proposés : vérifie et corrige</span>
-                  {aiProposals.map((p) => (
-                    <div key={p.id} className={c.field}>
-                      <input aria-label="Nom proposé" value={p.name} onChange={(e) => setAiProposals(aiProposals.map((x) => (x.id === p.id ? { ...x, name: e.target.value } : x)))} />
-                      <input aria-label="Consigne proposée" maxLength={CUE_MAX} value={p.cue} onChange={(e) => setAiProposals(aiProposals.map((x) => (x.id === p.id ? { ...x, cue: clampCue(e.target.value) } : x)))} />
-                    </div>
-                  ))}
-                  <div className={s.actions}>
-                    <Button variant="primary" onClick={() => { setSegs((l) => l.map((x) => { const p = aiProposals.find((y) => y.id === x.id); return p ? { ...x, name: p.name, cue: p.cue } : x })); setAiProposals(null) }}>Valider ces noms</Button>
-                    <Button onClick={() => setAiProposals(null)}>Ignorer</Button>
-                  </div>
-                </div>
-              )}
             </HelpToggle>
 
             <HelpToggle open={help === 'rhythm'} onToggle={() => toggleHelp('rhythm')} icon={<Timer size={22} aria-hidden="true" />} title="Rythme régulier" sub="Quand chaque exercice dure pareil.">
@@ -553,7 +529,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
               <div className={c.line}><span>Pause</span><Stepper label="Durée de pause" value={rest} min={0} max={60} step={5} unit="s" onChange={setRest} /></div>
               <div className={c.line}><span>Début</span><Stepper label="Début du rythme" value={rhythmStart} min={0} max={Math.max(0, Math.floor(duration) - 5)} step={1} unit="s" onChange={setRhythmStart} /></div>
               <Button disabled={!duration} onClick={() => setRhythmStart(Math.min(Math.max(0, Math.floor(getTime())), Math.max(0, Math.floor(duration) - 5)))}>Début = position de lecture ({pos.toFixed(0)} s)</Button>
-              <Button variant="primary" disabled={!duration} onClick={() => replaceAll(mergeCandidates(rhythmBoundaries({ effortSec: effort, restSec: rest, startSec: rhythmStart }, duration, []), duration), 'Rythme régulier appliqué. Ajuste les traits sur la frise si besoin.')}>Appliquer le rythme</Button>
+              <Button variant="primary" disabled={!duration} onClick={() => replaceAll(rhythmSegments({ effortSec: effort, restSec: rest, startSec: rhythmStart }, duration), 'Rythme régulier appliqué : les pauses sont retirées. Ajuste les traits sur la frise si besoin.')}>Appliquer le rythme</Button>
               {notes.map((n) => <p key={n} role="status" className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
             </HelpToggle>
 
@@ -586,13 +562,11 @@ function SplitEditor({ source }: { source: VideoSource }) {
 
           {sel && (
             <div className={c.card}>
-              <span className={c.label}>Exercice sélectionné</span>
+              <span className={c.label}>Partie sélectionnée</span>
               <div className={c.selInfo}>
-                {!isYT && url && <div className={c.mini}><video ref={mini} src={url} muted playsInline aria-label="Aperçu en boucle de l'exercice sélectionné" /></div>}
+                {!isYT && url && <div className={c.mini}><video ref={mini} src={url} muted playsInline aria-label="Aperçu en boucle de la partie sélectionnée" /></div>}
                 <div className={c.selText}>
-                  <label className={c.field}>Nom, dit à voix haute
-                    <input value={sel.name} onChange={(e) => patch(sel.id, { name: e.target.value })} />
-                  </label>
+                  <strong style={{ fontSize: 18 }}>{sel.name}</strong>
                   <span className={ui.hint}>{clock(sel.startSec)} – {clock(sel.endSec)} · {Math.round(durationOf(sel))} s</span>
                 </div>
               </div>
@@ -604,17 +578,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
                 <Button disabled={selIndex <= 0} onClick={() => selectCut(selIndex - 1)}>Régler le début</Button>
                 <Button disabled={selIndex >= segs.length - 1} onClick={() => selectCut(selIndex)}>Régler la fin</Button>
               </div>
-              <hr className={c.sep} />
-              <label className={c.field}>Précision, facultative ({CUE_MAX} caractères au plus)
-                <input value={sel.cue} maxLength={CUE_MAX} onChange={(e) => patch(sel.id, { cue: clampCue(e.target.value) })} placeholder="Assise, dos droit" />
-              </label>
-              <p className={ui.hint} style={{ margin: 0 }}>La voix dira : « {speechFor({ name: sel.name.trim() || (lang === 'en' ? 'no name' : 'sans nom'), cue: sel.cue, durationSec: Math.round(durationOf(sel)) }, lang)} »</p>
-              <div className={c.tags} role="group" aria-label="Zone du corps">
-                {TAGS.map((t) => {
-                  const on = sel.tags.includes(t)
-                  return <button key={t} type="button" aria-pressed={on} className={[c.tag, on ? c.tagOn : ''].join(' ')} onClick={() => patch(sel.id, { tags: on ? sel.tags.filter((x) => x !== t) : [...sel.tags, t] })}>{t}</button>
-                })}
-              </div>
+              <p className={ui.hint} style={{ margin: 0 }}>Les noms et les consignes se donnent à l'étape suivante.</p>
             </div>
           )}
         </div>

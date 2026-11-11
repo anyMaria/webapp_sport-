@@ -7,7 +7,7 @@ import { Screen } from '../app/Screen'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { Thumb } from './Thumb'
-import { equipmentText } from './equipment'
+import { equipmentText, mergeEquipment } from './equipment'
 import { deleteExercise, duplicateWorkout, formatDuration, inVideoOrder, workoutDurationSec } from './workouts'
 import { TAGS } from '../screens/Split'
 import { formatTime } from '../import/segments'
@@ -29,6 +29,9 @@ export function Library() {
   const [confirm, setConfirm] = useState<{ kind: 'workout' | 'exercise'; id: string; name: string } | null>(null)
 
   const srcName = useMemo(() => new Map(sources.map((x) => [x.id, x.title])), [sources])
+  const exById = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises])
+  const srcById = useMemo(() => new Map(sources.map((x) => [x.id, x])), [sources])
+  const equipOf = (w: (typeof workouts)[number]) => equipmentText(mergeEquipment(w.items.map((i) => srcById.get(exById.get(i.exerciseId)?.sourceId ?? '')?.equipment)))
   const srcYt = useMemo(() => new Map(sources.map((x) => [x.id, x.youtubeId])), [sources])
   const allTags = useMemo(() => [...new Set([...TAGS, ...exercises.flatMap((e) => e.tags)])], [exercises])
   const lenOk = (e: (typeof exercises)[number]) => {
@@ -73,7 +76,7 @@ export function Library() {
               <div>
                 <span className={c.wname}>{w.name}</span>{w.isExpress && <span className={c.badge}>Express</span>}
                 <div className={c.meta}>{formatDuration(workoutDurationSec(w.items))} · {w.items.length} exercice{w.items.length > 1 ? 's' : ''}</div>
-                {w.equipment?.length ? <div className={c.meta}>{equipmentText(w.equipment)}</div> : null}
+                {equipOf(w) ? <div className={c.meta}>{equipOf(w)}</div> : null}
               </div>
               <div className={c.btnRow}>
                 <Button variant="primary" className={c.small} onClick={() => nav(`/seance/${w.id}`)}><Play size={18} fill="currentColor" aria-hidden="true" />Lancer</Button>
@@ -114,7 +117,10 @@ export function Library() {
             <div key={v.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div className={c.groupHead}>
                 <strong>{v.title}<span className={c.meta}> · {shown.filter((e) => e.sourceId === v.id).length} exercice{shown.filter((e) => e.sourceId === v.id).length > 1 ? 's' : ''}</span></strong>
-                <Button className={c.small} onClick={() => nav(`/composer/nouvelle?video=${v.id}`)}>Séance avec cette vidéo</Button>
+                <div className={c.btnRow}>
+                  <Button className={c.small} onClick={() => nav(`/nommer/${v.id}`)}>Renommer</Button>
+                  <Button className={c.small} onClick={() => nav(`/composer/nouvelle?video=${v.id}`)}>Séance avec cette vidéo</Button>
+                </div>
               </div>
               {inVideoOrder(shown.filter((e) => e.sourceId === v.id)).map((e) => (
                 <div key={e.id} className={c.ex}>

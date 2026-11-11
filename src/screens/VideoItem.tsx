@@ -41,7 +41,7 @@ export function VideoItem({ src, exerciseCount, thumbId, fresh = false, onDelete
   const n = exerciseCount
   const short = src.kind === 'file' && src.durationSec < SHORT_SEC
   const draft = n === 0 && !!src.draftSegs
-  const meta = [originText(src), src.author, src.durationSec ? formatTime(src.durationSec) : null, src.kind === 'file' ? formatBytes(src.sizeBytes ?? 0) : 'lien YouTube'].filter(Boolean).join(' · ')
+  const meta = [originText(src), src.author, src.equipment?.length ? src.equipment.join(', ') : null, src.durationSec ? formatTime(src.durationSec) : null, src.kind === 'file' ? formatBytes(src.sizeBytes ?? 0) : 'lien YouTube'].filter(Boolean).join(' · ')
   const state = n > 0 ? `${n} exercice${n > 1 ? 's' : ''}` : draft ? 'brouillon' : 'pas encore découpée'
 
   const askDelete = async () => setToDelete((await workoutsUsingSource(db, src.id)).map((w) => w.name))
@@ -77,6 +77,7 @@ export function VideoItem({ src, exerciseCount, thumbId, fresh = false, onDelete
             {n === 0 && <Button variant="primary" onClick={() => nav(`/decoupage/${src.id}`)}><Scissors size={18} aria-hidden="true" />{draft ? 'Reprendre le découpage' : 'Découper en exercices'}</Button>}
             {n === 0 && short && !draft && <Button onClick={() => void saveSegments(src, wholeVideo(src.durationSec, src.title))}>Garder la vidéo entière</Button>}
             {n > 0 && <Button variant="primary" onClick={() => nav(`/composer/nouvelle?video=${src.id}`)}>Créer une séance</Button>}
+            {n > 0 && <Button onClick={() => nav(`/nommer/${src.id}`)}>Noms et équipement</Button>}
             {n > 0 && <Button onClick={() => nav('/bibliotheque')}>Voir les exercices</Button>}
             <Button variant="danger" className={c.del} onClick={() => void askDelete()}>Supprimer</Button>
           </div>

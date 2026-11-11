@@ -129,7 +129,7 @@ export function formatTime(sec: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
-const isDefaultName = (name: string) => /^Exercice \d+$/.test(name.trim())
+export const isDefaultName = (name: string) => /^Exercice \d+$/.test(name.trim())
 
 /**
  * Après une coupe ou une fusion, les noms laissés par défaut (« Exercice N ») suivent l'ordre ; les noms saisis ne bougent pas.

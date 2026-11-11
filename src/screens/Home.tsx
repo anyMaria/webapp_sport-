@@ -13,7 +13,7 @@ import { streakMessage, useMotivation } from '../motivation/useMotivation'
 import { originText, type Exercise, type VideoSource, type Workout } from '../data/types'
 import { APP_NAME } from '../lib/constants'
 import { useVideoStats } from '../data/useVideoStats'
-import { equipmentText } from '../library/equipment'
+import { equipmentText, mergeEquipment } from '../library/equipment'
 import h from './home.module.css'
 
 const DAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
@@ -66,12 +66,15 @@ export function Home() {
     ...toCompose.map((v) => ({ v, state: `${counts[v.id]} exercice${counts[v.id]! > 1 ? 's' : ''}, pas encore dans une séance`, label: 'Créer une séance', to: `/composer/nouvelle?video=${v.id}`, cut: false })),
   ]
   // Premiers pas : où en est-elle des trois étapes ?
-  const firstStep = sources.length === 0 ? 1 : exercises.length === 0 ? 2 : 3
+  const firstStep = sources.length === 0 ? 1 : exercises.length === 0 ? 2 : 4
   const firstSteps = [
     { title: 'Importe une vidéo', text: 'Un TikTok enregistré, un lien YouTube ou un fichier. Tout reste sur cet iPad.', label: 'Importer une vidéo', to: '/import' },
-    { title: 'Découpe-la en exercices', text: "À la main, ou avec l'aide de l'IA qui pose les coupes pour toi.", label: toCut[0] ? `Découper « ${toCut[0].title} »` : 'Voir mes vidéos', to: toCut[0] ? `/decoupage/${toCut[0].id}` : '/videos' },
+    { title: 'Découpe-la en exercices', text: "À la main, au rythme régulier, ou avec l'IA qui pose les coupes.", label: toCut[0] ? `Découper « ${toCut[0].title} »` : 'Voir mes vidéos', to: toCut[0] ? `/decoupage/${toCut[0].id}` : '/videos' },
+    { title: 'Nomme les exercices', text: 'Le nom que dira la voix, une consigne, la zone du corps.', label: '', to: '' },
     { title: 'Crée ta séance', text: 'Choisis tes exercices et la durée de chacun.', label: 'Créer ma séance', to: toCompose[0] ? `/composer/nouvelle?video=${toCompose[0].id}` : '/composer/nouvelle' },
   ]
+
+  const equipOf = (w: Workout) => equipmentText(mergeEquipment(w.items.map((i) => srcById.get(exById.get(i.exerciseId)?.sourceId ?? '')?.equipment)))
 
   const originsOf = (w: Workout) => [...new Set(w.items.map((i) => { const src = srcById.get(exById.get(i.exerciseId)?.sourceId ?? ''); return src ? originText(src) : undefined }).filter(Boolean))] as string[]
 
@@ -97,7 +100,7 @@ export function Home() {
         <section className={h.empty} aria-label="Premiers pas">
           <div>
             <h2 style={{ fontSize: 28 }}>Bienvenue dans {APP_NAME}</h2>
-            <p className={h.hint} style={{ fontSize: 16, margin: '4px 0 0' }}>Trois étapes pour ta première séance.</p>
+            <p className={h.hint} style={{ fontSize: 16, margin: '4px 0 0' }}>Quatre étapes pour ta première séance.</p>
           </div>
           <ol className={h.firstSteps}>
             {firstSteps.map((st, i) => {
@@ -120,7 +123,7 @@ export function Home() {
               <span className={h.eyebrow}>Séance du jour{slotToday ? ` · créneau de ${hhmm(settings.slot.time)}` : ''}</span>
               <h2>{today?.name}</h2>
               <span className={h.todayMeta}>{today ? `${formatDuration(workoutDurationSec(today.items))} · ${today.items.length} exercices` : ''}</span>
-              {today?.equipment?.length ? <span className={h.todayMeta} style={{ display: 'block', fontWeight: 600 }}>{equipmentText(today.equipment)}</span> : null}
+              {today && equipOf(today) ? <span className={h.todayMeta} style={{ display: 'block', fontWeight: 600 }}>{equipOf(today)}</span> : null}
             </div>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <button className={h.start} onClick={() => today && nav(`/seance/${today.id}`)}><Play size={22} fill="currentColor" aria-hidden="true" />Commencer</button>
@@ -197,7 +200,7 @@ export function Home() {
                   <div>
                     <div className={h.cardName}>{w.name}</div>
                     <span className={h.hint}>{formatDuration(workoutDurationSec(w.items))} · {w.items.length} exercices</span>
-                    {w.equipment?.length ? <span className={h.hint} style={{ display: 'block' }}>{equipmentText(w.equipment)}</span> : null}
+                    {equipOf(w) ? <span className={h.hint} style={{ display: 'block' }}>{equipOf(w)}</span> : null}
                   </div>
                   <button className={h.play} aria-label={`Lancer ${w.name}`} onClick={() => nav(`/seance/${w.id}`)}><Play size={20} fill="currentColor" aria-hidden="true" /></button>
                 </div>

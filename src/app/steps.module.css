@@ -1,8 +1,9 @@
 .steps { display: flex; align-items: center; gap: 6px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
-.step { display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 6px; border-radius: 20px; font-size: 14px; font-weight: 600; color: var(--text-muted); }
-.step + .step::before { content: ''; width: 18px; height: 2px; margin-right: 6px; background: var(--line); border-radius: 1px; }
+.step { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 4px; border-radius: 20px; font-size: 14px; font-weight: 600; color: var(--text-muted); }
+.step + .step::before { content: ''; width: 14px; height: 2px; margin-right: 6px; background: var(--line); border-radius: 1px; }
 .num { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 14px; border: 2px solid var(--border); font-family: var(--font-title); font-size: 14px; font-variant-numeric: tabular-nums; }
 .now { color: var(--text); }
 .now .num { background: var(--effort); border-color: var(--effort); color: var(--on-accent); }
 .done .num { border-color: var(--effort); color: var(--effort); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.done { padding-right: 4px; }

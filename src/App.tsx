@@ -8,6 +8,7 @@ import { Demo } from './screens/Demo'
 import { Videos } from './screens/Videos'
 import { Import } from './screens/Import'
 import { Split } from './screens/Split'
+import { Naming } from './screens/Naming'
 import { Library } from './library/Library'
 import { Composer } from './library/Composer'
 import { SessionScreen } from './player/SessionScreen'
@@ -22,6 +23,7 @@ export function App() {
       <Route path="/import" element={<Import />} />
       <Route path="/videos" element={<Videos />} />
       <Route path="/decoupage/:sourceId" element={<Split />} />
+      <Route path="/nommer/:sourceId" element={<Naming />} />
       <Route path="/mon-rythme" element={<Rhythm />} />
       <Route path="/collection" element={<Collection />} />
       <Route path="/demo" element={<Demo />} />

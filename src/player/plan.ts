@@ -1,3 +1,4 @@
+import { mergeEquipment } from '../library/equipment'
 import { db } from '../data/db'
 import type { PlayItem } from '../engine/session'
 import { composeExpress } from '../motivation/express'
@@ -32,16 +33,18 @@ export async function buildPlan(workoutId: string, express = false): Promise<Pla
   const thumbIds: (string | undefined)[] = []
   const thumbYt: (string | undefined)[] = []
   let missing = 0
+  const equip: (string[] | undefined)[] = []
   for (const it of wanted) {
     const ex = await db.exercises.get(it.exerciseId)
     const src = ex ? await db.sources.get(ex.sourceId) : undefined
     if (!ex || !src) { missing++; continue }
     items.push({ exerciseId: ex.id, name: ex.name, cue: ex.cue, durationSec: it.durationSec, restAfterSec: it.restAfterSec })
     thumbIds.push(ex.thumbId)
+    equip.push(src.equipment)
     thumbYt.push(src.kind === 'youtube' ? src.youtubeId : undefined)
     if (src.kind === 'file' && src.opfsPath) clips.push({ kind: 'file', opfsPath: src.opfsPath, startSec: ex.startSec, endSec: ex.endSec })
     else if (src.kind === 'youtube' && src.youtubeId) clips.push({ kind: 'youtube', youtubeId: src.youtubeId, startSec: ex.startSec, endSec: ex.endSec })
     else clips.push({ kind: 'missing', startSec: ex.startSec, endSec: ex.endSec })
   }
-  return { workoutId: w.id, name: w.name, items, clips, thumbIds, thumbYt, missing, isExpress: w.isExpress || express, equipment: w.equipment ?? [] }
+  return { workoutId: w.id, name: w.name, items, clips, thumbIds, thumbYt, missing, isExpress: w.isExpress || express, equipment: mergeEquipment(equip) }
 }

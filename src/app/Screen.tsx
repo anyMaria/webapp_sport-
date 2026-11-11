@@ -2,11 +2,11 @@ import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { IconButton } from '../ui/Button'
-import { Steps } from './Steps'
+import { Steps, type StepNo } from './Steps'
 import s from './app.module.css'
 
 /** Cadre commun des écrans secondaires : bouton retour, titre, sous-titre, et les trois étapes quand l'écran en fait partie. */
-export function Screen({ title, subtitle, step, children }: { title: string; subtitle?: string; step?: 1 | 2 | 3; children: ReactNode }) {
+export function Screen({ title, subtitle, step, children }: { title: string; subtitle?: string; step?: StepNo; children: ReactNode }) {
   const nav = useNavigate()
   return (
     <main className={s.screen}>

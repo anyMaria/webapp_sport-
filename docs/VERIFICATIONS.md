@@ -199,9 +199,16 @@ Attention : la clé de l'IA n'est réglée dans Vercel que pour l'app habituelle
 | 13.7 | Loupe + deux fois, puis glisse le doigt sur les blocs. | La frise est agrandie et défile ; les traits s'attrapent toujours. |
 | 13.8 | « Repérer avec l'IA », puis « Envoyer les images et repérer », sur ta vidéo TikTok de référence. | Une barre avance (« partie 2 sur 6 »…), puis des traits orange apparaissent avec des noms d'exercices. **C'est le vrai test du service** : si un message d'erreur s'affiche, recopie-le-moi tel quel. |
 | 13.9 | Ajuste deux ou trois traits orange, puis « Tout est bon ». | Les traits deviennent blancs. |
-| 13.10 | « Enregistrer N exercices ». | Tu arrives sur « Nouvelle séance », déjà remplie, étape 3. « Enregistrer la séance » te ramène à l'accueil, la séance est là. |
+| 13.10 | « Suivant : nommer », puis « Enregistrer N exercices ». | Tu arrives sur « Nouvelle séance », déjà remplie, étape 4. « Enregistrer la séance » te ramène à l'accueil, la séance est là. |
 | 13.11 | Accueil avec une vidéo importée mais pas découpée. | Rubrique « À continuer » avec la vignette et « Découper ». |
 | 13.12 | Vidéo YouTube (lien) : « Marquer ici », glisser un trait. | Même fonctionnement ; le lecteur YouTube suit avec un léger retard, c'est normal. |
 | 13.13 | Réglages : « Langue des annonces » sur English, choisis une voix anglaise, « Tester le son » (mode « + consignes »). | « Next: Cat cow, 45 seconds. » avec une voix anglaise, Spotify continue. |
 | 13.14 | Lance une séance en mode « + consignes ». | Entre deux exercices : « Next: {nom}, {durée} seconds. » |
-| 13.15 | Création de séance : coche « Bandes élastiques » et « Blocs de yoga », puis « Autre… » et écris « Tapis ». Enregistre. | L'équipement s'affiche sur la carte de la séance, sur la séance du jour et au départ de la séance (« Prépare : … »). |
+| 13.15 | Étape « Nommer » : « Équipement pour cette vidéo », coche « Bandes élastiques », puis « Autre… » et écris « Tapis ». | La séance faite avec cette vidéo affiche cet équipement (carte, séance du jour, départ de la séance : « Prépare : … »). |
+| 13.16 | Rythme régulier, effort 5 s et pause 5 s, « Appliquer le rythme ». | Chaque pause est « Pause », grise, « Retiré ». Seuls les efforts sont gardés. |
+| 13.17 | « Suivant : nommer ». | À gauche la vidéo du premier exercice en boucle, à droite la liste. Rien à faire défiler. |
+| 13.18 | Touche le champ du nom, tape un nom, « Suivant » (ou Entrée sur le clavier), tape le suivant… | Le nom par défaut est remplacé dès la première lettre ; la vidéo passe à l'exercice suivant. Dis-moi si le clavier cache quelque chose d'important. |
+| 13.19 | Touche une ligne de la liste. | La vidéo montre tout de suite cet exercice. |
+| 13.20 | Case « Montrer les parties retirées ». | Les pauses apparaissent en gris ; « Garder cette partie » en fait un exercice. Le choix est retenu la fois suivante. |
+| 13.21 | Mes vidéos, une vidéo déjà découpée : « Noms et équipement », change un nom, « Terminé ». | Le nouveau nom est dans la bibliothèque et dans les séances. |
+| 13.22 | Découpage d'une vidéo YouTube longue : « 10 s » en avant et en arrière. | La lecture saute de 10 s. |

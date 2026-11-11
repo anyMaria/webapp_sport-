@@ -35,3 +35,5 @@
 .saveBar { position: sticky; bottom: 0; padding: 12px 0; background: var(--bg); z-index: 1; }
 .otherRow { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
 .field input { color: var(--text); }
+.videoTop { display: flex; gap: 14px; align-items: center; }
+.videoThumb { width: 76px; height: 76px; flex-shrink: 0; border-radius: var(--radius-s); background: var(--line); object-fit: cover; }

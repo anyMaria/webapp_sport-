@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { audioBoundaries, energyEnvelope, findBeeps, findSilences } from './audio'
 import { mergeCandidates } from './merge'
-import { rhythmBoundaries } from './rhythm'
+import { rhythmBoundaries, rhythmSegments } from './rhythm'
 import { adaptiveThreshold, frameMotion, histDistance, lumaHistogram, shotBoundaries } from './shots'
 import type { Candidate } from './types'
 
@@ -115,4 +115,24 @@ describe('fusion', () => {
   it('ignore les frontières collées aux extrémités', () => {
     expect(mergeCandidates([cand(0.4, 'shots'), cand(119.5, 'shots')], 120)).toHaveLength(1)
   })
+})
+
+describe('rythme régulier, découpage direct', () => {
+  const view = (s: ReturnType<typeof rhythmSegments>) => s.map((x) => [x.name, x.startSec, x.endSec, x.kept])
+  it('effort = exercice gardé, pause = pause retirée, même très courts', () => {
+    expect(view(rhythmSegments({ effortSec: 5, restSec: 3, startSec: 0 }, 16))).toEqual([
+      ['Exercice 1', 0, 5, true], ['Pause', 5, 8, false], ['Exercice 2', 8, 13, true], ['Pause', 13, 16, false],
+    ])
+  })
+  it('avant le début : une intro retirée ; bout final de moins de 1 s rattaché', () => {
+    expect(view(rhythmSegments({ effortSec: 30, restSec: 10, startSec: 4 }, 74.5))).toEqual([
+      ['Intro', 0, 4, false], ['Exercice 1', 4, 34, true], ['Pause', 34, 44, false], ['Exercice 2', 44, 74.5, true],
+    ])
+  })
+  it('sans pause : exercices bout à bout', () => {
+    expect(view(rhythmSegments({ effortSec: 10, restSec: 0, startSec: 0 }, 25))).toEqual([
+      ['Exercice 1', 0, 10, true], ['Exercice 2', 10, 20, true], ['Exercice 3', 20, 25, true],
+    ])
+  })
+  it('effort nul : rien', () => { expect(rhythmSegments({ effortSec: 0, restSec: 5, startSec: 0 }, 30)).toEqual([]) })
 })

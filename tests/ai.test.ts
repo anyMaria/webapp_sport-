@@ -19,6 +19,7 @@ describe('choix du modèle de vision', () => {
     expect(pickVisionModel(['whisper-large', 'llama-3.1-8b-instant', 'meta-llama/llama-4-maverick-17b', 'meta-llama/llama-4-scout-17b'])).toBe('meta-llama/llama-4-scout-17b')
     expect(pickVisionModel(['x-vision-preview', 'a'])).toBe('x-vision-preview')
     expect(pickVisionModel(['llama-3.1-8b-instant'])).toBeNull()
+    expect(pickVisionModel(['llama-3.1-8b-instant', 'meta-llama/llama-4-x'])).toBe('meta-llama/llama-4-x')
     expect(pickVisionModel(['llama-guard-scout'])).toBeNull()
   })
 })

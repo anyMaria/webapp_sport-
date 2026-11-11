@@ -36,7 +36,7 @@ function provider(k: string): { name: string; base: string } {
 
 /** Modèles de vision, du plus léger au plus lourd, d'après leur nom. */
 export function pickVisionModel(ids: string[]): string | null {
-  const order = [/scout/i, /vision/i, /maverick/i]
+  const order = [/scout/i, /vision/i, /maverick/i, /llama-4/i, /pixtral/i, /[-_]vl[-_\d]/i]
   for (const re of order) {
     const hit = ids.find((id) => re.test(id) && !/guard|whisper|tts/i.test(id))
     if (hit) return hit
@@ -157,7 +157,11 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         : res.status(502).json({ provider: p.name, error: `Le service a refusé la demande (code ${l.status}). La clé correspond-elle bien à ${p.name} ?` })
     }
     const m = await model(k, p.base)
-    return res.status(200).json({ enabled: Boolean(m), hasKey: true, provider: p.name, model: m })
+    if (m) return res.status(200).json({ enabled: true, hasKey: true, provider: p.name, model: m })
+    // Pas de modèle : dire pourquoi (liste refusée, ou aucun nom de vision reconnu).
+    const l = await listModels(k, p.base)
+    const reason = l.ok ? `Aucun modèle de vision reconnu parmi ${l.ids.length} modèles. Ouvre /api/ai?models=1 et choisis-en un pour XAI_MODEL.` : `Liste des modèles refusée (code ${l.status}) : vérifie la clé.`
+    return res.status(200).json({ enabled: false, hasKey: true, provider: p.name, model: null, reason })
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée.' })
   if (!k) return res.status(503).json({ error: "L'IA n'est pas activée (aucune clé)." })

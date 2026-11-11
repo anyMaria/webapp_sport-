@@ -72,7 +72,8 @@ export function VideoItem({ src, exerciseCount, fresh = false, onDeleted }: { sr
         <div className={s.actions}>
           {n === 0 && short && !draft && <Button variant="primary" onClick={() => void saveSegments(src, wholeVideo(src.durationSec, src.title))}>Garder la vidéo entière</Button>}
           {n === 0 && <Button variant={short && !draft ? 'secondary' : 'primary'} onClick={() => nav(`/decoupage/${src.id}`)}>{draft ? 'Reprendre le découpage' : 'Découper'}</Button>}
-          {n > 0 && <Button variant="primary" onClick={() => nav('/bibliotheque')}>Voir les exercices</Button>}
+          {n > 0 && <Button variant="primary" onClick={() => nav(`/composer/nouvelle?video=${src.id}`)}>Créer une séance</Button>}
+          {n > 0 && <Button onClick={() => nav('/bibliotheque')}>Voir les exercices</Button>}
           <Button variant="danger" onClick={() => void askDelete()}>Supprimer</Button>
         </div>
       )}

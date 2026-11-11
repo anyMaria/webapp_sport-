@@ -25,3 +25,7 @@
 .steppers { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
 .total { font-family: var(--font-title); font-weight: 600; font-size: 28px; }
 @media (max-width: 900px) { .composer { grid-template-columns: 1fr; } .page { padding: 20px; } }
+.videoCard { background: var(--surface); border-radius: var(--radius-m); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.pickRow { display: flex; align-items: center; gap: 12px; min-height: var(--touch); padding: 4px 8px; border-radius: var(--radius-s); background: var(--surface-2); cursor: pointer; }
+.pickRow input { width: 26px; height: 26px; accent-color: var(--effort); flex-shrink: 0; }
+.groupHead { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 4px 0; }

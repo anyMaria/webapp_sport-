@@ -59,7 +59,7 @@ export function Home() {
           {unrevealed > 0 && <Link to="/collection" className={[h.pill, h.pillGlow].join(' ')}>Une pochette t'attend</Link>}
           <Link to="/mon-rythme" className={h.pill}>
             <Flame size={20} color="var(--transition)" aria-hidden="true" />
-            <span>{result.streak > 0 ? `${result.streak} semaine${result.streak > 1 ? 's' : ''} d'affilée` : 'Nouvelle série'}</span>
+            <span>{result.streak > 0 ? `${result.streak} semaine${result.streak > 1 ? 's' : ''} d'affilée` : 'Mon rythme'}</span>
           </Link>
           <Link to="/videos" className={h.pillStrong}><Film size={20} aria-hidden="true" />Mes vidéos</Link>
           <Link to="/import" className={h.pillMain}><Plus size={22} aria-hidden="true" />Importer une vidéo</Link>

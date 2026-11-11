@@ -7,7 +7,7 @@ import { Screen } from '../app/Screen'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { Thumb } from './Thumb'
-import { deleteExercise, duplicateWorkout, formatDuration, workoutDurationSec } from './workouts'
+import { deleteExercise, duplicateWorkout, formatDuration, inVideoOrder, workoutDurationSec } from './workouts'
 import { TAGS } from '../screens/Split'
 import { formatTime } from '../import/segments'
 import c from './library.module.css'
@@ -24,11 +24,18 @@ export function Library() {
   const [tag, setTag] = useState('')
   const [sourceId, setSourceId] = useState('')
   const [q, setQ] = useState('')
+  const [len, setLen] = useState<'' | 'short' | 'mid' | 'long'>('')
   const [confirm, setConfirm] = useState<{ kind: 'workout' | 'exercise'; id: string; name: string } | null>(null)
 
   const srcName = useMemo(() => new Map(sources.map((x) => [x.id, x.title])), [sources])
   const srcYt = useMemo(() => new Map(sources.map((x) => [x.id, x.youtubeId])), [sources])
-  const shown = exercises.filter((e) => (!tag || e.tags.includes(tag)) && (!sourceId || e.sourceId === sourceId) && e.name.toLowerCase().includes(q.trim().toLowerCase()))
+  const allTags = useMemo(() => [...new Set([...TAGS, ...exercises.flatMap((e) => e.tags)])], [exercises])
+  const lenOk = (e: (typeof exercises)[number]) => {
+    const d = e.endSec - e.startSec
+    return !len || (len === 'short' ? d < 30 : len === 'mid' ? d >= 30 && d <= 60 : d > 60)
+  }
+  const shown = exercises.filter((e) => (!tag || (tag === '__none' ? e.tags.length === 0 : e.tags.includes(tag))) && (!sourceId || e.sourceId === sourceId) && lenOk(e) && e.name.toLowerCase().includes(q.trim().toLowerCase()))
+  const videosShown = sources.filter((v) => shown.some((e) => e.sourceId === v.id))
 
   const doDelete = async () => {
     if (!confirm) return
@@ -90,21 +97,38 @@ export function Library() {
           </label>
         </div>
         <div className={c.chips} role="group" aria-label="Filtrer par zone du corps">
-          {TAGS.map((t) => <button key={t} type="button" aria-pressed={tag === t} className={[c.chip, tag === t ? c.chipOn : ''].join(' ')} onClick={() => setTag(tag === t ? '' : t)}>{t}</button>)}
+          {allTags.map((t) => <button key={t} type="button" aria-pressed={tag === t} className={[c.chip, tag === t ? c.chipOn : ''].join(' ')} onClick={() => setTag(tag === t ? '' : t)}>{t}</button>)}
+          <button type="button" aria-pressed={tag === '__none'} className={[c.chip, tag === '__none' ? c.chipOn : ''].join(' ')} onClick={() => setTag(tag === '__none' ? '' : '__none')}>sans zone</button>
+        </div>
+        <div className={c.chips} role="group" aria-label="Filtrer par durée">
+          {([['short', 'Moins de 30 s'], ['mid', '30 à 60 s'], ['long', 'Plus d’une minute']] as const).map(([k, label]) => (
+            <button key={k} type="button" aria-pressed={len === k} className={[c.chip, len === k ? c.chipOn : ''].join(' ')} onClick={() => setLen(len === k ? '' : k)}>{label}</button>
+          ))}
         </div>
         {exercises.length === 0 && <p className={s.empty}>Aucun exercice. Importe une vidéo pour commencer.</p>}
         {exercises.length > 0 && shown.length === 0 && <p className={s.empty}>Aucun exercice ne correspond à ces filtres.</p>}
         <div className={c.exList}>
-          {shown.map((e) => (
-            <div key={e.id} className={c.ex}>
-              <Thumb id={e.thumbId} youtubeId={srcYt.get(e.sourceId)} className={c.exThumb} />
-              <div className={c.exMain}>
-                <input className={c.exName} value={e.name} aria-label={`Nom de l'exercice ${e.name}`} onChange={(ev) => void db.exercises.update(e.id, { name: ev.target.value })} />
-                <span className={c.meta}>Dit à voix haute : « {e.name} »{e.cue ? ` puis « ${e.cue} »` : ''}</span>
-                <span className={c.meta}>{srcName.get(e.sourceId) ?? 'Vidéo supprimée'} · {formatTime(e.startSec)} – {formatTime(e.endSec)}{e.tags.length ? ` · ${e.tags.join(', ')}` : ''}</span>
+          {videosShown.map((v) => (
+            <div key={v.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className={c.groupHead}>
+                <strong>{v.title}<span className={c.meta}> · {shown.filter((e) => e.sourceId === v.id).length} exercice{shown.filter((e) => e.sourceId === v.id).length > 1 ? 's' : ''}</span></strong>
+                <Button className={c.small} onClick={() => nav(`/composer/nouvelle?video=${v.id}`)}>Séance avec cette vidéo</Button>
               </div>
-              <Button variant="danger" className={c.small} onClick={() => setConfirm({ kind: 'exercise', id: e.id, name: e.name })}>Supprimer</Button>
+              {inVideoOrder(shown.filter((e) => e.sourceId === v.id)).map((e) => (
+                <div key={e.id} className={c.ex}>
+                  <Thumb id={e.thumbId} youtubeId={srcYt.get(e.sourceId)} className={c.exThumb} />
+                  <div className={c.exMain}>
+                    <input className={c.exName} value={e.name} aria-label={`Nom de l'exercice ${e.name}`} onChange={(ev) => void db.exercises.update(e.id, { name: ev.target.value })} />
+                    <span className={c.meta}>Dit à voix haute : « {e.name} »{e.cue ? ` puis « ${e.cue} »` : ''}</span>
+                    <span className={c.meta}>{srcName.get(e.sourceId) ?? 'Vidéo supprimée'} · {formatTime(e.startSec)} – {formatTime(e.endSec)}{e.tags.length ? ` · ${e.tags.join(', ')}` : ''}</span>
+                  </div>
+                  <Button variant="danger" className={c.small} onClick={() => setConfirm({ kind: 'exercise', id: e.id, name: e.name })}>Supprimer</Button>
+                </div>
+              ))}
             </div>
+          ))}
+          {shown.filter((e) => !srcName.has(e.sourceId)).map((e) => (
+            <div key={e.id} className={c.ex}><span className={c.exName}>{e.name}</span></div>
           ))}
         </div>
       </section>

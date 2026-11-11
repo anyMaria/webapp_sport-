@@ -1,6 +1,6 @@
 import { db } from '../data/db'
 import { newId } from '../data/importFile'
-import type { Workout, WorkoutItem } from '../data/types'
+import type { Exercise, Workout, WorkoutItem } from '../data/types'
 
 export const DEFAULT_ITEM_SEC = 30
 
@@ -38,4 +38,33 @@ export async function deleteExercise(id: string): Promise<void> {
     if (ex?.thumbId) await db.thumbs.delete(ex.thumbId)
     await db.exercises.delete(id)
   })
+}
+
+/** Exercices d'une vidéo, dans l'ordre de la vidéo. */
+export const inVideoOrder = (exs: Exercise[]) => [...exs].sort((a, b) => a.startSec - b.startSec)
+
+/** Élément de séance pour un exercice : durée de l'extrait (30 s au plus par défaut, 5 s au moins), sans repos. */
+export function itemFor(e: Exercise): WorkoutItem {
+  const len = Math.round(e.endSec - e.startSec) || DEFAULT_ITEM_SEC
+  return { exerciseId: e.id, durationSec: Math.max(5, Math.min(len, DEFAULT_ITEM_SEC)), restAfterSec: 0 }
+}
+
+/** Durée de l'extrait lui-même, arrondie à 5 s, entre 5 s et 300 s. */
+export function naturalDurationSec(e: Exercise): number {
+  return Math.min(300, Math.max(5, Math.round((e.endSec - e.startSec) / 5) * 5))
+}
+
+/** Même durée et même repos pour tous les éléments. */
+export const applyRhythm = (items: WorkoutItem[], durationSec: number, restAfterSec: number): WorkoutItem[] =>
+  items.map((i) => ({ ...i, durationSec, restAfterSec }))
+
+/** Retire la suite d'éléments consécutifs qui partagent la vidéo de l'élément `index`. */
+export function removeRun(items: WorkoutItem[], index: number, sourceOf: (exerciseId: string) => string | undefined): WorkoutItem[] {
+  const src = sourceOf(items[index]?.exerciseId ?? '')
+  if (src === undefined) return items.filter((_, k) => k !== index)
+  let a = index
+  let b = index
+  while (a > 0 && sourceOf(items[a - 1]!.exerciseId) === src) a--
+  while (b < items.length - 1 && sourceOf(items[b + 1]!.exerciseId) === src) b++
+  return items.filter((_, k) => k < a || k > b)
 }

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check, Dumbbell, Flame, Play, Plus, Film, Scissors } from 'lucide-react'
+import { Check, ChevronRight, Dumbbell, Flame, Play, Plus, Film, Scissors, Sticker } from 'lucide-react'
 import { db } from '../data/db'
 import { Thumb } from '../library/Thumb'
 import { formatDuration, workoutDurationSec } from '../library/workouts'
@@ -9,6 +9,7 @@ import { composeExpress } from '../motivation/express'
 import { motivationPhrase, phraseSeed } from '../motivation/phrases'
 import { sessionsUntilNextPouch } from '../stickers/schedule'
 import { weekDays, weekStatusLine } from '../motivation/streak'
+import { dayKey } from '../motivation/weeks'
 import { streakMessage, useMotivation } from '../motivation/useMotivation'
 import { originText, type Exercise, type VideoSource, type Workout } from '../data/types'
 import { APP_NAME } from '../lib/constants'
@@ -50,10 +51,14 @@ export function Home() {
   const greeting = who ? `${hello} ${who}` : hello
   const slotLine = slotToday
     ? `C'est ton jour ! Ton créneau est à ${hhmm(settings.slot.time)}. On y va ?`
-    : nextSlotDay !== undefined ? `Prochain créneau : ${DAYS[nextSlotDay]} à ${hhmm(settings.slot.time)}.` : 'Choisis tes jours de créneau dans « Mon rythme ».'
+    : nextSlotDay !== undefined ? `Prochain créneau : ${DAYS[nextSlotDay]} à ${hhmm(settings.slot.time)}.` : 'Choisis tes jours de créneau : touche cette carte.'
   const msg = streakMessage(result)
   const phrase = motivationPhrase({ slotToday, streak: result.streak, weekDone: result.current.validated }, phraseSeed(now))
   const days = weekDays(result.current, now, settings.slot.days)
+  // Date de chaque rond de la semaine (lundi → dimanche), pour ouvrir « Ma semaine » sur ce jour.
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7))
+  const dayDate = (i: number) => dayKey(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i))
+  const DAY_FULL = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
   const pct = Math.min(100, Math.round((result.current.count / settings.weeklyGoal) * 100))
 
   // À continuer : vidéos pas encore découpées (ou en cours), puis vidéos découpées qui ne sont dans aucune séance.
@@ -87,10 +92,7 @@ export function Home() {
         </div>
         <div className={h.pills}>
           {unrevealed > 0 && <Link to="/collection" className={[h.pill, h.pillGlow].join(' ')}>Une pochette t'attend</Link>}
-          <Link to="/mon-rythme" className={h.pill}>
-            <Flame size={20} color="var(--transition)" aria-hidden="true" style={{ animation: result.streak > 0 ? 'wiggle 2.8s ease-in-out infinite' : undefined, transformOrigin: '50% 90%' }} />
-            <span>Mon espace{result.streak > 0 ? ` · ${result.streak} semaine${result.streak > 1 ? 's' : ''}` : ''}</span>
-          </Link>
+          <Link to="/collection" className={h.pill}><Sticker size={20} color="var(--transition)" aria-hidden="true" /><span>Collection</span></Link>
           <Link to="/videos" className={h.pillStrong}><Film size={20} aria-hidden="true" />Mes vidéos</Link>
           <Link to="/import" className={h.pillMain}><Plus size={22} aria-hidden="true" />Importer une vidéo</Link>
         </div>
@@ -136,21 +138,37 @@ export function Home() {
           </div>
 
           <div className={h.week}>
+            {/* Toute la carte se touche : elle ouvre « Ma semaine ». Les jours, eux, ouvrent directement le jour choisi. */}
+            <Link to="/mon-rythme" className={h.weekLink} aria-label="Ma semaine : ton calendrier, ton objectif et ton créneau" />
             <div>
-              <span className={h.eyebrow} style={{ color: 'var(--text-muted)' }}>Cette semaine</span>
+              <div className={h.weekHead}>
+                <span className={h.eyebrow} style={{ color: 'var(--text-muted)' }}>Cette semaine</span>
+                <span className={h.weekMore} aria-hidden="true">Ma semaine<ChevronRight size={18} /></span>
+              </div>
               <p className={h.slotLine}>{slotLine}</p>
               <div><span className={h.big}>{result.current.count} / {settings.weeklyGoal}</span><span className={h.unit}>séances</span></div>
               <span className={h.hint}>dont {Math.min(result.current.inApp, settings.minInApp)} / {settings.minInApp} dans l'app, le reste ici ou ailleurs</span>
+              {result.streak > 0 && (
+                <span className={h.streak}>
+                  <Flame size={18} color="var(--transition)" aria-hidden="true" style={{ animation: 'wiggle 2.8s ease-in-out infinite', transformOrigin: '50% 90%' }} />
+                  Série : {result.streak} semaine{result.streak > 1 ? 's' : ''}
+                </span>
+              )}
             </div>
-            <div className={h.days} role="list" aria-label="Jours de la semaine">
+            <div className={h.days}>
               {days.map((d, i) => (
-                <div key={i} className={h.day} role="listitem">
+                <Link
+                  key={i}
+                  to={`/mon-rythme?jour=${dayDate(i)}`}
+                  className={h.day}
+                  aria-label={`${DAY_FULL[i]}${d.state === 'done' ? ' : séance faite dans l\'app' : d.state === 'external' ? ' : sport fait ailleurs' : d.state === 'slot' ? ' : créneau prévu' : ''}. Ouvrir ce jour`}
+                >
                   <div className={[h.dot, d.state === 'done' ? h.dotDone : d.state === 'external' ? h.dotExt : d.state === 'today' ? h.dotToday : d.state === 'slot' ? h.dotSlot : ''].join(' ')}>
-                    {d.state === 'done' && <Check size={18} strokeWidth={3} aria-label="Séance faite dans l'app" />}
-                    {d.state === 'external' && <Dumbbell size={18} aria-label="Sport fait ailleurs" />}
+                    {d.state === 'done' && <Check size={18} strokeWidth={3} aria-hidden="true" />}
+                    {d.state === 'external' && <Dumbbell size={18} aria-hidden="true" />}
                   </div>
                   <span>{d.label}</span>
-                </div>
+                </Link>
               ))}
             </div>
             <div>

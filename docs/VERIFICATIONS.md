@@ -219,3 +219,6 @@ Attention : la clé de l'IA n'est réglée dans Vercel que pour l'app habituelle
 | 13.27 | Séance YouTube : regarde la mise en page pendant le décompte de fin d'exercice. | La vidéo à gauche n'est jamais recouverte ; le décompte, « Encore » et « Passer maintenant » sont à droite. |
 | 13.28 | Une vidéo YouTube Shorts (verticale), puis une vidéo YouTube classique. | Les deux remplissent la partie gauche au mieux, sans être rognées. |
 | 13.29 | Séance YouTube en mode « Son de la vidéo ». | Dis-moi si le son vient, ou si la vidéo reste muette (Safari peut refuser le son sans toucher la vidéo). |
+| 13.30 | Accueil : touche la carte « Cette semaine » n'importe où (hors jours). | « Ma semaine » s'ouvre : calendrier, objectif, créneau. |
+| 13.31 | Touche le rond d'un jour (ex. mercredi). | « Ma semaine » s'ouvre sur ce jour, le formulaire pour noter un sport est à l'écran. |
+| 13.32 | Bouton « Collection » en haut de l'accueil. | La collection s'ouvre, avec le bouton Réglages. |

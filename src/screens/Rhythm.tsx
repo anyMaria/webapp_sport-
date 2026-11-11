@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Check, ChevronLeft, ChevronRight, Dumbbell } from 'lucide-react'
 import { db, saveSettings } from '../data/db'
 import { Screen } from '../app/Screen'
-import { SpaceNav } from './SpaceNav'
 import { Button, IconButton } from '../ui/Button'
 import { Switch } from '../ui/Switch'
 import { Stepper } from '../ui/Stepper'
@@ -22,7 +22,7 @@ const WEEK_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const DAY_NAMES = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0] // lundi → dimanche, valeurs de getDay()
 
-/** Mon rythme : le mois, la série, le créneau fixe, la séance express de secours. */
+/** Ma semaine (ouverte depuis la carte « Cette semaine » de l'accueil) : le mois, le sport fait ailleurs, l'objectif, le créneau fixe. */
 export function Rhythm() {
   const { settings, result, logs } = useMotivation()
   const workouts = useLiveQuery(() => db.workouts.toArray(), []) ?? []
@@ -43,9 +43,15 @@ export function Rhythm() {
 
   // Ce mois-ci : les jours avec une séance comptée, et la navigation d'un mois à l'autre.
   const today = new Date()
-  const [shown, setShown] = useState({ year: today.getFullYear(), month: today.getMonth() })
+  // Un jour touché sur l'accueil arrive ici déjà choisi (?jour=AAAA-MM-JJ), pour noter un sport tout de suite.
+  const askedDay = useSearchParams()[0].get('jour')
+  const asked = askedDay && /^\d{4}-\d{2}-\d{2}$/.test(askedDay) ? askedDay : null
+  const [shown, setShown] = useState(() => (asked ? { year: Number(asked.slice(0, 4)), month: Number(asked.slice(5, 7)) - 1 } : { year: today.getFullYear(), month: today.getMonth() }))
   const activities = useLiveQuery(() => db.activities.toArray(), []) ?? []
-  const [picked, setPicked] = useState<string | null>(null) // jour choisi dans le calendrier (AAAA-MM-JJ)
+  const [picked, setPicked] = useState<string | null>(asked) // jour choisi dans le calendrier (AAAA-MM-JJ)
+  const noteRef = useRef<HTMLDivElement>(null)
+  // Arrivée depuis un jour de l'accueil : le formulaire « noter un sport » vient à l'écran.
+  useEffect(() => { if (asked) noteRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, [asked])
   const [sport, setSport] = useState('')
   const [minutes, setMinutes] = useState(60)
   const externalKeys = new Set(activities.map((a) => a.date))
@@ -65,8 +71,7 @@ export function Rhythm() {
   const monthName = new Date(shown.year, shown.month, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
 
   return (
-    <Screen title="Mon rythme" subtitle="La série compte les semaines, pas les jours : un jour sans séance ne casse rien.">
-      <SpaceNav />
+    <Screen title="Ma semaine" subtitle="Ton organisation : le mois, ton objectif et ton créneau. La série compte les semaines, pas les jours.">
       <div className={s.grid}>
         <section className={r.card} aria-label={isCurrent ? 'Ce mois-ci' : monthName}>
           <span className={r.label}>{isCurrent ? 'Ce mois-ci' : 'Un autre mois'}</span>
@@ -102,7 +107,7 @@ export function Rhythm() {
           </div>
           <Button onClick={() => setPicked(dayKey(today))}><Dumbbell size={18} aria-hidden="true" />Noter un sport fait ailleurs</Button>
           {picked && (
-            <div className={r.note} role="group" aria-label={`Sport du ${pickedLabel}`} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div ref={noteRef} className={r.note} role="group" aria-label={`Sport du ${pickedLabel}`} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <strong style={{ textTransform: 'capitalize' }}>{pickedLabel}</strong>
               {dayActivities.map((a) => (
                 <div key={a.id} className={s.actions} style={{ justifyContent: 'space-between' }}>

@@ -6,6 +6,7 @@ const ITEMS = [
   { to: '/bibliotheque', title: "Bibliothèque d'exercices", hint: 'Tes exercices et tes séances' },
   { to: '/mon-rythme', title: 'Mon rythme', hint: 'Série, créneau, séance express' },
   { to: '/collection', title: 'Collection', hint: 'Tes stickers' },
+  { to: '/demo', title: 'Séance de démonstration', hint: 'Teste le lecteur avec une vidéo' },
   { to: '/reglages', title: 'Réglages', hint: 'Son, séance, sauvegarde' },
 ]
 

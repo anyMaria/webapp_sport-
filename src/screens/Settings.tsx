@@ -88,7 +88,7 @@ export function Settings() {
   }
 
   const testSound = async () => {
-    await playBeep(settings.beepVolume)
+    await playBeep(settings.beepVolume, { freq: 880, durationSec: 0.2 })
     if (settings.audioMode === 'music+beeps+voice') speak('Ensuite : Rotation du buste, quarante-cinq secondes.', settings.voiceName)
   }
 

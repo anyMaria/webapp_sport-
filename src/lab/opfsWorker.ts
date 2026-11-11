@@ -27,3 +27,5 @@ ctx.onmessage = async (e) => {
     ctx.postMessage({ error: (err as Error).message })
   }
 }
+
+export {}

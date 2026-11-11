@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Minus, Plus, Scissors, Merge } from 'lucide-react'
+import { Minus, Plus, Scissors, Merge, Play, Pause, Rewind, FastForward } from 'lucide-react'
 import { db } from '../data/db'
 import type { VideoSource } from '../data/types'
 import { useOpfsUrl } from '../video/useOpfsUrl'
 import { saveSegments } from '../import/saveExercises'
 import {
-  adjust, clampCue, CUE_MAX, durationOf, formatTime, keptSegments, mergeWithNext, splitAt, STEP_SEC, wholeVideo, type Segment,
+  adjust, clampCue, CUE_MAX, durationOf, formatTime, keptSegments, mergeWithNext, splitAt, wholeVideo, type Segment,
 } from '../import/segments'
 import { Screen } from '../app/Screen'
 import { createYTPlayer, type YTPlayer } from '../video/youtube'
@@ -15,6 +15,7 @@ import { parseChapters } from '../import/chapters'
 import { rhythmBoundaries } from '../import/detect/rhythm'
 import { mergeCandidates } from '../import/detect/merge'
 import { Switch } from '../ui/Switch'
+import { Timeline } from '../import/Timeline'
 import { Stepper } from '../ui/Stepper'
 import { analyzeVideo } from '../import/detect/analyze'
 import { getVideoFile } from '../data/opfs'
@@ -25,6 +26,9 @@ import c from '../import/import.module.css'
 import s from '../app/app.module.css'
 
 export const TAGS = ['dos', 'épaules', 'hanches', 'nuque', 'jambes', 'poignets']
+const RATES = [1, 0.75, 0.5, 0.25]
+const STEPS = [0.5, 1, 3, 5]
+const fmt = (n: number) => String(n).replace('.', ',')
 
 export function Split() {
   const { sourceId = '' } = useParams()
@@ -44,10 +48,17 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const ytHost = useRef<HTMLDivElement>(null)
   const ytRef = useRef<YTPlayer | null>(null)
   const [segs, setSegs] = useState<Segment[]>(() => (isYT && !source.durationSec ? [] : wholeVideo(source.durationSec)))
+  const segsRef = useRef<Segment[]>([])
   const [selId, setSelId] = useState(() => segs[0]?.id ?? '')
   const [pos, setPos] = useState(0)
   const [saving, setSaving] = useState(false)
   const video = useRef<HTMLVideoElement>(null)
+  const mini = useRef<HTMLVideoElement>(null)
+  const [rate, setRate] = useState(1)
+  const rateRef = useRef(1)
+  const [step, setStep] = useState(1)
+  const [playing, setPlaying] = useState(false)
+  const [cutMsg, setCutMsg] = useState<string | null>(null)
   const [useShots, setUseShots] = useState(true)
   const [useAudio, setUseAudio] = useState(true)
   const [useRhythm, setUseRhythm] = useState(false)
@@ -100,6 +111,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
   }, [])
   useEffect(() => () => abort.current?.abort(), [])
 
+  useEffect(() => { segsRef.current = segs }, [segs])
   const sel = segs.find((x) => x.id === selId)
   const selIndex = segs.findIndex((x) => x.id === selId)
   const duration = isYT ? ytDur : source.durationSec
@@ -116,6 +128,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
       .then((p) => {
         if (!alive) { p.destroy(); return }
         ytRef.current = p
+        try { p.setPlaybackRate(rateRef.current) } catch { /* pas prêt */ }
         const d = Math.floor(p.getDuration())
         if (d > 0) {
           setYtDur(d)
@@ -132,25 +145,36 @@ function SplitEditor({ source }: { source: VideoSource }) {
     return () => { alive = false; ytRef.current?.destroy(); ytRef.current = null }
   }, [isYT, source.youtubeId, source.id])
 
-  // YouTube : l'aperçu boucle sur le segment sélectionné (position lue toutes les 250 ms).
+  // Position de lecture, lue régulièrement (la vidéo n'est plus bouclée : elle défile sur toute sa durée).
   useEffect(() => {
-    if (!isYT || start === undefined || end === undefined) return
-    ytRef.current?.seekTo(start, true)
     const id = window.setInterval(() => {
-      const p = ytRef.current
-      if (!p) return
-      try {
-        const t = p.getCurrentTime()
+      if (isYT) {
+        const p = ytRef.current
+        if (!p) return
+        try { setPos(p.getCurrentTime()); setPlaying(p.getPlayerState() === 1) } catch { /* pas prêt */ }
+      } else if (video.current) {
+        const t = video.current.currentTime
         setPos(t)
-        if (t >= end - 0.3 || t < start - 1) p.seekTo(start, true)
-      } catch { /* pas prêt */ }
-    }, 250)
+        // Pendant la lecture, le segment sélectionné suit la tête de lecture.
+        if (!video.current.paused) {
+          const host = segsRef.current.find((x) => t >= x.startSec && t < x.endSec)
+          if (host) setSelId(host.id)
+        }
+      }
+    }, isYT ? 250 : 100)
     return () => window.clearInterval(id)
-  }, [isYT, start, end])
+  }, [isYT])
 
-  // Aperçu du segment sélectionné, en boucle.
+  const changeRate = (r: number) => {
+    setRate(r)
+    rateRef.current = r
+    if (video.current) video.current.playbackRate = r
+    try { ytRef.current?.setPlaybackRate(r) } catch { /* pas prêt */ }
+  }
+
+  // Aperçu du segment sélectionné, en boucle, dans la petite fenêtre à côté des réglages.
   useEffect(() => {
-    const v = video.current
+    const v = mini.current
     if (isYT || !v || start === undefined || end === undefined || !url) return
     const toStart = () => { try { v.currentTime = start } catch { /* pas prêt */ } }
     toStart()
@@ -163,9 +187,41 @@ function SplitEditor({ source }: { source: VideoSource }) {
       h = requestAnimationFrame(loop)
     }
     h = requestAnimationFrame(loop)
-    const id = window.setInterval(() => setPos(v.currentTime), 250)
-    return () => { stop = true; cancelAnimationFrame(h); window.clearInterval(id) }
+    return () => { stop = true; cancelAnimationFrame(h) }
   }, [start, end, url, isYT])
+
+  const seekTo = (t0: number) => {
+    const t = Math.min(Math.max(0, t0), duration || t0)
+    if (isYT) ytRef.current?.seekTo(t, true)
+    else if (video.current) video.current.currentTime = t
+    setPos(t)
+    const host = segs.find((x) => t >= x.startSec && t < x.endSec)
+    if (host) setSelId(host.id)
+  }
+
+  const togglePlay = () => {
+    if (isYT) {
+      const p = ytRef.current
+      if (!p) return
+      if (p.getPlayerState() === 1) p.pauseVideo(); else p.playVideo()
+      return
+    }
+    const v = video.current
+    if (!v) return
+    if (v.paused) void v.play().catch(() => undefined); else v.pause()
+  }
+
+  const cutHere = () => {
+    const t = getTime()
+    const host = segs.find((x) => t > x.startSec && t < x.endSec)
+    if (!host) { setCutMsg('Place la lecture à l’intérieur d’un segment.'); return }
+    const next = splitAt(segs, host.id, t)
+    if (next === segs) { setCutMsg('Trop près d’une coupe : un segment dure au moins 1 s.'); return }
+    setCutMsg(null)
+    setSegs(next)
+    const i = next.findIndex((x) => x.id === host.id)
+    setSelId(next[i + 1]!.id)
+  }
 
   const runAi = async () => {
     if (!source.opfsPath) return
@@ -194,7 +250,14 @@ function SplitEditor({ source }: { source: VideoSource }) {
     nav('/bibliotheque')
   }
 
+
   if (error) return <Screen title="Vidéo introuvable"><p className={s.empty}>Cette vidéo n'est plus sur l'iPad.</p></Screen>
+
+  const resetAll = () => {
+    if (!duration) return
+    const w = wholeVideo(duration)
+    setSegs(w); setSelId(w[0]!.id); setNotes([])
+  }
 
   return (
     <main className={c.page}>
@@ -212,25 +275,120 @@ function SplitEditor({ source }: { source: VideoSource }) {
       </header>
 
       <div className={c.cols}>
-        <div className={c.left}>
+        <div className={c.stage}>
           <div className={c.preview}>
             {isYT && <div ref={ytHost} style={{ position: 'absolute', inset: 0 }} />}
             {ytError && <span role="alert" style={{ position: 'absolute', padding: 16, color: 'var(--transition)', textAlign: 'center' }}>{ytError}</span>}
-            {!isYT && url && <video ref={video} src={url} muted playsInline aria-label="Aperçu du segment sélectionné" />}
-            {sel && !isYT && <span className={c.time}>{formatTime(sel.startSec)} – {formatTime(sel.endSec)}</span>}
+            {!isYT && url && (
+              <video
+                ref={video}
+                src={url}
+                muted
+                playsInline
+                aria-label="Vidéo à découper"
+                onLoadedData={(e) => { e.currentTarget.playbackRate = rateRef.current; void e.currentTarget.play().catch(() => undefined) }}
+                onPlay={() => setPlaying(true)}
+                onPause={() => setPlaying(false)}
+                onEnded={() => setPlaying(false)}
+              />
+            )}
           </div>
+
+          <div className={c.transport} role="group" aria-label="Lecture">
+            <Button onClick={() => seekTo(getTime() - step)} aria-label={`Reculer de ${fmt(step)} secondes`}><Rewind size={20} aria-hidden="true" />{fmt(step)} s</Button>
+            <Button variant="primary" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Lecture'}>
+              {playing ? <Pause size={22} aria-hidden="true" /> : <Play size={22} aria-hidden="true" />}{playing ? 'Pause' : 'Lecture'}
+            </Button>
+            <Button onClick={() => seekTo(getTime() + step)} aria-label={`Avancer de ${fmt(step)} secondes`}>{fmt(step)} s<FastForward size={20} aria-hidden="true" /></Button>
+            <div className={c.speeds} role="group" aria-label="Vitesse de lecture">
+              {RATES.map((r) => (
+                <button key={r} type="button" className={[c.pick, rate === r ? c.pickOn : ''].join(' ')} aria-pressed={rate === r} onClick={() => changeRate(r)}>{fmt(r)}x</button>
+              ))}
+            </div>
+          </div>
+
+          <Timeline segs={segs} duration={duration} pos={pos} selId={selId} step={step} onSeek={seekTo} />
+        </div>
+
+        <div className={c.side}>
+          <div className={c.card}>
+            <span className={c.label}>Découpe</span>
+            <Button variant="primary" className={c.cut} disabled={!duration} onClick={cutHere}>
+              <Scissors size={22} aria-hidden="true" />Couper ici · {pos.toFixed(1)} s
+            </Button>
+            {cutMsg && <p role="alert" className={[s.msg, s.msgErr].join(' ')}>{cutMsg}</p>}
+            <div role="group" aria-label="Pas d'ajustement" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span className={ui.hint}>Pas d'ajustement (aussi pour reculer et avancer)</span>
+              <div className={c.pickRow}>
+                {STEPS.map((v) => (
+                  <button key={v} type="button" className={[c.pick, step === v ? c.pickOn : ''].join(' ')} aria-pressed={step === v} onClick={() => setStep(v)}>{fmt(v)} s</button>
+                ))}
+              </div>
+            </div>
+            {sel ? (
+              <>
+                <div className={c.selInfo}>
+                  {!isYT && url && <div className={c.mini}><video ref={mini} src={url} muted playsInline aria-label="Aperçu du segment sélectionné" /></div>}
+                  <div className={c.selText}>
+                    <strong>{sel.name}</strong>
+                    <span className={ui.hint}>{formatTime(sel.startSec)} – {formatTime(sel.endSec)} · {Math.round(durationOf(sel))} s</span>
+                    <Button disabled={selIndex >= segs.length - 1} onClick={() => setSegs(mergeWithNext(segs, sel.id))}><Merge size={18} aria-hidden="true" />Fusionner</Button>
+                  </div>
+                </div>
+                <div className={c.adjust} role="group" aria-label="Début">
+                  <span className={c.label} style={{ width: 56 }}>Début</span>
+                  <IconButton label={`Début ${fmt(step)} s plus tôt`} onClick={() => setSegs(adjust(segs, sel.id, 'start', -step, duration))}><Minus size={20} aria-hidden="true" /></IconButton>
+                  <strong>{sel.startSec.toFixed(1)} s</strong>
+                  <IconButton label={`Début ${fmt(step)} s plus tard`} onClick={() => setSegs(adjust(segs, sel.id, 'start', step, duration))}><Plus size={20} aria-hidden="true" /></IconButton>
+                </div>
+                <div className={c.adjust} role="group" aria-label="Fin">
+                  <span className={c.label} style={{ width: 56 }}>Fin</span>
+                  <IconButton label={`Fin ${fmt(step)} s plus tôt`} onClick={() => setSegs(adjust(segs, sel.id, 'end', -step, duration))}><Minus size={20} aria-hidden="true" /></IconButton>
+                  <strong>{sel.endSec.toFixed(1)} s</strong>
+                  <IconButton label={`Fin ${fmt(step)} s plus tard`} onClick={() => setSegs(adjust(segs, sel.id, 'end', step, duration))}><Plus size={20} aria-hidden="true" /></IconButton>
+                </div>
+              </>
+            ) : (
+              <p className={ui.hint} style={{ margin: 0 }}>Lance la lecture et touche « Couper ici » à chaque changement d'exercice.</p>
+            )}
+          </div>
+
+          <section className={c.list} aria-label="Segments">
+            <div className={c.listHead}>
+              <span className={c.label}>Segments</span>
+              <span className={s.sub}>Touche un segment pour y aller</span>
+            </div>
+            {segs.map((x, i) => (
+              <div key={x.id} className={[c.row, !x.kept ? c.rowOff : '', x.id === selId ? c.rowSel : ''].join(' ')} onClick={() => { setSelId(x.id); seekTo(x.startSec) }}>
+                <div className={c.rowMain}>
+                  <input className={c.rowName} style={{ background: 'transparent', border: 'none', color: 'inherit', font: 'inherit', padding: 0, minHeight: 28 }} value={x.name} aria-label={`Nom du segment ${i + 1}`} onFocus={() => setSelId(x.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(x.id, { name: e.target.value })} />
+                  <span className={c.rowTime}>{formatTime(x.startSec)} – {formatTime(x.endSec)} · {Math.round(durationOf(x))} s</span>
+                </div>
+                {x.verify && <span className={c.verify}>Fin à vérifier</span>}
+                <button type="button" className={[c.keep, x.kept ? '' : c.keepOff].join(' ')} aria-pressed={x.kept} aria-label={`${x.name} : ${x.kept ? 'gardé' : 'retiré'}`} onClick={(e) => { e.stopPropagation(); patch(x.id, { kept: !x.kept }) }}>{x.kept ? 'Gardé' : 'Retiré'}</button>
+              </div>
+            ))}
+          </section>
+
+          {sel && (
+            <div className={c.card}>
+              <span className={c.label}>Consigne et zone du corps</span>
+              <label className={c.field}>Consigne (lue par la voix, {CUE_MAX} caractères au plus)
+                <input value={sel.cue} maxLength={CUE_MAX} onChange={(e) => patch(sel.id, { cue: clampCue(e.target.value) })} placeholder="Assise, dos droit" />
+              </label>
+              <div className={c.tags} role="group" aria-label="Zone du corps">
+                {TAGS.map((t) => {
+                  const on = sel.tags.includes(t)
+                  return <button key={t} type="button" aria-pressed={on} className={[c.tag, on ? c.tagOn : ''].join(' ')} onClick={() => patch(sel.id, { tags: on ? sel.tags.filter((x) => x !== t) : [...sel.tags, t] })}>{t}</button>
+                })}
+              </div>
+            </div>
+          )}
 
           {isYT ? (
             <div className={c.card}>
               <span className={c.label}>Marquage YouTube</span>
-              <p className={ui.hint} style={{ margin: 0 }}>L'analyse automatique n'est pas possible avec le lecteur YouTube : marque les changements à la main, par rythme régulier, ou avec les repères de la description.</p>
-              <div className={s.actions}>
-                <Button variant="primary" disabled={!duration} onClick={() => {
-                  const t = getTime()
-                  const host = segs.find((x) => t > x.startSec && t < x.endSec)
-                  if (host) setSegs(splitAt(segs, host.id, t))
-                }}>Marquer ici ({formatTime(pos)})</Button>
-              </div>
+              <p className={ui.hint} style={{ margin: 0 }}>L'analyse automatique n'est pas possible avec le lecteur YouTube : coupe à la main pendant la lecture, par rythme régulier, ou avec les repères de la description.</p>
               <label className={c.field}>Repères de la description (une ligne par exercice, ex. « 2:15 Chat-vache »)
                 <textarea value={chapterText} onChange={(e) => setChapterText(e.target.value)} rows={4} style={{ borderRadius: 14, border: '2px solid var(--border)', background: 'var(--bg-deep)', padding: 10, color: 'inherit', font: 'inherit' }} />
               </label>
@@ -249,139 +407,72 @@ function SplitEditor({ source }: { source: VideoSource }) {
                   const r = mergeCandidates(rhythmBoundaries({ effortSec: effort, restSec: rest, startSec: rhythmStart }, duration, []), duration)
                   setSegs(r); setSelId(r[0]?.id ?? ''); setNotes(['Rythme régulier appliqué.'])
                 }}>Appliquer le rythme régulier</Button>
-                <Button onClick={() => { if (!duration) return; const w = wholeVideo(duration); setSegs(w); setSelId(w[0]!.id); setNotes([]) }}>Tout remettre à zéro</Button>
+                <Button onClick={resetAll}>Tout remettre à zéro</Button>
               </div>
               {notes.map((n) => <p key={n} className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
             </div>
           ) : (
-          <div className={c.card}>
-            <span className={c.label}>Pré-marquage automatique</span>
-            <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Changements de plan</span><Switch on={useShots} onChange={setUseShots} label="Changements de plan" /></div>
-            <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Bips et silences</span><Switch on={useAudio} onChange={setUseAudio} label="Bips et silences" /></div>
-            <div className={s.actions} style={{ justifyContent: 'space-between' }}>
-              <span>Rythme régulier<br /><span className={ui.hint}>{effort} s d'effort, {rest} s de pause</span></span>
-              <Switch on={useRhythm} onChange={setUseRhythm} label="Rythme régulier" />
-            </div>
-            {useRhythm && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Effort</span><Stepper label="Durée d'effort" value={effort} min={5} max={120} step={5} unit="s" onChange={setEffort} /></div>
-                <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Pause</span><Stepper label="Durée de pause" value={rest} min={0} max={60} step={5} unit="s" onChange={setRest} /></div>
-                <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Premier exercice à</span><Stepper label="Début du premier exercice" value={rhythmStart} min={0} max={Math.max(0, Math.floor(source.durationSec) - 5)} step={5} unit="s" onChange={setRhythmStart} /></div>
-              </div>
-            )}
-            {progress ? (
-              <div role="status" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <span className={s.msg}>{progress.label}…</span>
-                <progress max={1} {...(progress.ratio === null ? {} : { value: progress.ratio })} style={{ width: '100%', height: 12 }} aria-label="Analyse en cours" />
-                <Button onClick={() => abort.current?.abort()}>Annuler l'analyse</Button>
-              </div>
-            ) : (
-              <div className={s.actions}>
-                <Button onClick={() => void analyze()} disabled={!useShots && !useAudio && !useRhythm}>Analyser</Button>
-                <Button onClick={() => { const w = wholeVideo(source.durationSec); setSegs(w); setSelId(w[0]!.id); setNotes([]) }}>Tout remettre à zéro</Button>
-              </div>
-            )}
-            {notes.map((n) => <p key={n} className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
-            {aiOn && !aiProposals && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {aiConfirm ? (
-                  <div role="alertdialog" aria-label="Envoyer des images à un service d'IA" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <p className={s.msg}>Des images de cette vidéo (2 ou 3 par exercice gardé) vont quitter l'iPad pour être envoyées à un service d'IA. Ce service est payant à l'usage.</p>
-                    <div className={s.actions}><Button variant="primary" onClick={() => void runAi()}>Envoyer les images</Button><Button onClick={() => setAiConfirm(false)}>Annuler</Button></div>
-                  </div>
-                ) : (
-                  <Button disabled={aiBusy || keptCount === 0} onClick={() => setAiConfirm(true)}>{aiBusy ? 'Nommage en cours…' : "Nommer les exercices avec l'IA"}</Button>
-                )}
-                {aiError && <p role="alert" className={[s.msg, s.msgErr].join(' ')}>{aiError}</p>}
-              </div>
-            )}
-            {aiProposals && (
-              <div role="group" aria-label="Propositions de l'IA" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <span className={c.label}>Propositions : vérifie et corrige</span>
-                {aiProposals.map((p) => (
-                  <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <input aria-label="Nom proposé" value={p.name} onChange={(e) => setAiProposals(aiProposals.map((x) => (x.id === p.id ? { ...x, name: e.target.value } : x)))} style={{ minHeight: 48, borderRadius: 14, border: '2px solid var(--border)', background: 'var(--bg-deep)', padding: '0 12px', color: 'inherit' }} />
-                    <input aria-label="Consigne proposée" maxLength={CUE_MAX} value={p.cue} onChange={(e) => setAiProposals(aiProposals.map((x) => (x.id === p.id ? { ...x, cue: clampCue(e.target.value) } : x)))} style={{ minHeight: 48, borderRadius: 14, border: '2px solid var(--border)', background: 'var(--bg-deep)', padding: '0 12px', color: 'inherit' }} />
-                  </div>
-                ))}
-                <div className={s.actions}>
-                  <Button variant="primary" onClick={() => { setSegs((l) => l.map((x) => { const p = aiProposals.find((y) => y.id === x.id); return p ? { ...x, name: p.name, cue: p.cue } : x })); setAiProposals(null) }}>Valider ces noms</Button>
-                  <Button onClick={() => setAiProposals(null)}>Ignorer</Button>
-                </div>
-                <p className={ui.hint} style={{ margin: 0 }}>Rien n'est enregistré tant que tu n'as pas validé, puis enregistré les exercices.</p>
-              </div>
-            )}
-          </div>
-          )}
-
-          {sel && (
             <div className={c.card}>
-              <span className={c.label}>Segment sélectionné</span>
-              <input type="range" className={c.scrub} min={sel.startSec} max={sel.endSec} step={0.1} value={Math.min(Math.max(pos, sel.startSec), sel.endSec)} aria-label="Position dans le segment" onChange={(e) => { const t = Number(e.target.value); if (isYT) ytRef.current?.seekTo(t, true); else if (video.current) video.current.currentTime = t; setPos(t) }} />
-              <div className={c.adjust} role="group" aria-label="Début">
-                <span className={c.label} style={{ width: 56 }}>Début</span>
-                <IconButton label="Début 0,5 s plus tôt" onClick={() => setSegs(adjust(segs, sel.id, 'start', -STEP_SEC, duration))}><Minus size={20} aria-hidden="true" /></IconButton>
-                <strong>{sel.startSec.toFixed(1)} s</strong>
-                <IconButton label="Début 0,5 s plus tard" onClick={() => setSegs(adjust(segs, sel.id, 'start', STEP_SEC, duration))}><Plus size={20} aria-hidden="true" /></IconButton>
+              <span className={c.label}>Pré-marquage automatique</span>
+              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Changements de plan</span><Switch on={useShots} onChange={setUseShots} label="Changements de plan" /></div>
+              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Bips et silences</span><Switch on={useAudio} onChange={setUseAudio} label="Bips et silences" /></div>
+              <div className={s.actions} style={{ justifyContent: 'space-between' }}>
+                <span>Rythme régulier<br /><span className={ui.hint}>{effort} s d'effort, {rest} s de pause</span></span>
+                <Switch on={useRhythm} onChange={setUseRhythm} label="Rythme régulier" />
               </div>
-              <div className={c.adjust} role="group" aria-label="Fin">
-                <span className={c.label} style={{ width: 56 }}>Fin</span>
-                <IconButton label="Fin 0,5 s plus tôt" onClick={() => setSegs(adjust(segs, sel.id, 'end', -STEP_SEC, duration))}><Minus size={20} aria-hidden="true" /></IconButton>
-                <strong>{sel.endSec.toFixed(1)} s</strong>
-                <IconButton label="Fin 0,5 s plus tard" onClick={() => setSegs(adjust(segs, sel.id, 'end', STEP_SEC, duration))}><Plus size={20} aria-hidden="true" /></IconButton>
-              </div>
-              <div className={s.actions}>
-                <Button onClick={() => { const next = splitAt(segs, sel.id, getTime()); setSegs(next) }}><Scissors size={18} aria-hidden="true" />Couper ici</Button>
-                <Button disabled={selIndex >= segs.length - 1} onClick={() => setSegs(mergeWithNext(segs, sel.id))}><Merge size={18} aria-hidden="true" />Fusionner avec le suivant</Button>
-              </div>
-              <label className={c.field}>Consigne (lue par la voix, {CUE_MAX} caractères au plus)
-                <input value={sel.cue} maxLength={CUE_MAX} onChange={(e) => patch(sel.id, { cue: clampCue(e.target.value) })} placeholder="Assise, dos droit" />
-              </label>
-              <div className={c.tags} role="group" aria-label="Zone du corps">
-                {TAGS.map((t) => {
-                  const on = sel.tags.includes(t)
-                  return <button key={t} type="button" aria-pressed={on} className={[c.tag, on ? c.tagOn : ''].join(' ')} onClick={() => patch(sel.id, { tags: on ? sel.tags.filter((x) => x !== t) : [...sel.tags, t] })}>{t}</button>
-                })}
-              </div>
+              {useRhythm && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Effort</span><Stepper label="Durée d'effort" value={effort} min={5} max={120} step={5} unit="s" onChange={setEffort} /></div>
+                  <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Pause</span><Stepper label="Durée de pause" value={rest} min={0} max={60} step={5} unit="s" onChange={setRest} /></div>
+                  <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Premier exercice à</span><Stepper label="Début du premier exercice" value={rhythmStart} min={0} max={Math.max(0, Math.floor(source.durationSec) - 5)} step={5} unit="s" onChange={setRhythmStart} /></div>
+                </div>
+              )}
+              {progress ? (
+                <div role="status" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <span className={s.msg}>{progress.label}…</span>
+                  <progress max={1} {...(progress.ratio === null ? {} : { value: progress.ratio })} style={{ width: '100%', height: 12 }} aria-label="Analyse en cours" />
+                  <Button onClick={() => abort.current?.abort()}>Annuler l'analyse</Button>
+                </div>
+              ) : (
+                <div className={s.actions}>
+                  <Button onClick={() => void analyze()} disabled={!useShots && !useAudio && !useRhythm}>Analyser</Button>
+                  <Button onClick={resetAll}>Tout remettre à zéro</Button>
+                </div>
+              )}
+              {notes.map((n) => <p key={n} className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
+              {aiOn && !aiProposals && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {aiConfirm ? (
+                    <div role="alertdialog" aria-label="Envoyer des images à un service d'IA" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <p className={s.msg}>Des images de cette vidéo (2 ou 3 par exercice gardé) vont quitter l'iPad pour être envoyées à un service d'IA. Ce service est payant à l'usage.</p>
+                      <div className={s.actions}><Button variant="primary" onClick={() => void runAi()}>Envoyer les images</Button><Button onClick={() => setAiConfirm(false)}>Annuler</Button></div>
+                    </div>
+                  ) : (
+                    <Button disabled={aiBusy || keptCount === 0} onClick={() => setAiConfirm(true)}>{aiBusy ? 'Nommage en cours…' : "Nommer les exercices avec l'IA"}</Button>
+                  )}
+                  {aiError && <p role="alert" className={[s.msg, s.msgErr].join(' ')}>{aiError}</p>}
+                </div>
+              )}
+              {aiProposals && (
+                <div role="group" aria-label="Propositions de l'IA" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <span className={c.label}>Propositions : vérifie et corrige</span>
+                  {aiProposals.map((p) => (
+                    <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <input aria-label="Nom proposé" value={p.name} onChange={(e) => setAiProposals(aiProposals.map((x) => (x.id === p.id ? { ...x, name: e.target.value } : x)))} style={{ minHeight: 48, borderRadius: 14, border: '2px solid var(--border)', background: 'var(--bg-deep)', padding: '0 12px', color: 'inherit' }} />
+                      <input aria-label="Consigne proposée" maxLength={CUE_MAX} value={p.cue} onChange={(e) => setAiProposals(aiProposals.map((x) => (x.id === p.id ? { ...x, cue: clampCue(e.target.value) } : x)))} style={{ minHeight: 48, borderRadius: 14, border: '2px solid var(--border)', background: 'var(--bg-deep)', padding: '0 12px', color: 'inherit' }} />
+                    </div>
+                  ))}
+                  <div className={s.actions}>
+                    <Button variant="primary" onClick={() => { setSegs((l) => l.map((x) => { const p = aiProposals.find((y) => y.id === x.id); return p ? { ...x, name: p.name, cue: p.cue } : x })); setAiProposals(null) }}>Valider ces noms</Button>
+                    <Button onClick={() => setAiProposals(null)}>Ignorer</Button>
+                  </div>
+                  <p className={ui.hint} style={{ margin: 0 }}>Rien n'est enregistré tant que tu n'as pas validé, puis enregistré les exercices.</p>
+                </div>
+              )}
             </div>
           )}
         </div>
-
-        <section className={c.list} aria-label="Segments">
-          <div className={c.listHead}>
-            <span className={c.label}>Segments</span>
-            <span className={s.sub}>Touche un segment pour ajuster ses bornes</span>
-          </div>
-          {segs.map((x, i) => (
-            <div key={x.id} className={[c.row, !x.kept ? c.rowOff : '', x.id === selId ? c.rowSel : ''].join(' ')} onClick={() => setSelId(x.id)}>
-              <div className={c.rowThumb} aria-hidden="true" />
-              <div className={c.rowMain}>
-                <input className={c.rowName} style={{ background: 'transparent', border: 'none', color: 'inherit', font: 'inherit', padding: 0, minHeight: 28 }} value={x.name} aria-label={`Nom du segment ${i + 1}`} onFocus={() => setSelId(x.id)} onChange={(e) => patch(x.id, { name: e.target.value })} />
-                <span className={c.rowTime}>{formatTime(x.startSec)} – {formatTime(x.endSec)} · {Math.round(durationOf(x))} s</span>
-              </div>
-              {x.verify && <span className={c.verify}>Fin à vérifier</span>}
-              <button type="button" className={[c.keep, x.kept ? '' : c.keepOff].join(' ')} aria-pressed={x.kept} aria-label={`${x.name} : ${x.kept ? 'gardé' : 'retiré'}`} onClick={(e) => { e.stopPropagation(); patch(x.id, { kept: !x.kept }) }}>{x.kept ? 'Gardé' : 'Retiré'}</button>
-            </div>
-          ))}
-        </section>
       </div>
-
-      <section className={c.timeline} aria-label="Toute la vidéo">
-        <div className={s.actions} style={{ justifyContent: 'space-between' }}>
-          <span className={c.label}>Toute la vidéo</span>
-          <div className={c.legend}>
-            <span><span className={c.dot} style={{ background: 'var(--effort)' }} />Gardé</span>
-            <span><span className={c.dot} style={{ background: 'var(--transition)' }} />À vérifier</span>
-            <span><span className={c.dot} style={{ background: 'var(--line)' }} />Retiré</span>
-          </div>
-        </div>
-        <div className={c.bar} role="group" aria-label={`Frise de la vidéo découpée en ${segs.length} segments`}>
-          {segs.map((x, i) => (
-            <button key={x.id} type="button" className={[c.barSeg, x.id === selId ? c.barSel : ''].join(' ')} style={{ flex: Math.max(1, durationOf(x)), background: !x.kept ? 'var(--line)' : x.verify ? 'var(--transition)' : 'var(--effort)' }} aria-label={`Segment ${i + 1} : ${x.kept ? 'gardé' : 'retiré'}`} aria-pressed={x.id === selId} onClick={() => setSelId(x.id)} />
-          ))}
-        </div>
-        <span className={ui.hint} style={{ display: 'flex', justifyContent: 'space-between' }}><span>0:00</span><span>{formatTime(duration)}</span></span>
-      </section>
     </main>
   )
 }

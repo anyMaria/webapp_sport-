@@ -35,3 +35,10 @@ Décisions prises par Claude Code quand le plan ne tranchait pas. Option la plus
 | 8 | Sans clé ou sans modèle, la fonction répond `enabled: false` et le bouton IA n'apparaît pas. Les propositions s'éditent et se valident avant d'être appliquées. | Plan, section 8. |
 | 8 | Import refusé avec un message clair si la vidéo ne tient pas dans l'espace restant ; alerte à 80 % d'espace utilisé dans les Réglages. | Gestion de l'espace disque (phase 8). |
 | 8 | Contraste vérifié par un test automatique sur les paires texte/fond des jetons (4,5:1). | Plan, section 11. |
+| 9 | TikTok : fichier seulement, pas de lien. Le texte l'explique (enregistrer d'abord la vidéo dans Photos). | Un lien TikTok ne se lit pas dans l'app sans le télécharger ou charger un service tiers, deux choses interdites. |
+| 9 | YouTube : lien ou fichier. « Autre » devient une troisième carte. L'origine du fichier est celle de la carte utilisée. | Demande de l'utilisatrice : une carte par source, plus de bloc « Origine des vidéos ». |
+| 9 | Écran d'import : liste « Mes vidéos » (toutes les vidéos, pas seulement celles de la session) juste sous les cartes, avec renommage, découpage et suppression. | Demande de l'utilisatrice. Plus simple que deux listes. |
+| 9 | Une vidéo déjà découpée n'offre plus « Découper », seulement « Voir les exercices ». | Enregistrer un second découpage ajouterait des doublons ; le redécoupage vient avec la phase 10 (vidéo = unité). |
+| 9 | Découpage : la vidéo défile sur toute sa durée (plus de boucle sur le segment). L'aperçu en boucle du segment est une petite fenêtre à côté des réglages (fichiers seulement). | Demande de l'utilisatrice. Pas de second lecteur YouTube. |
+| 9 | Pas d'ajustement 0,5 / 1 / 3 / 5 s (1 s par défaut), utilisé pour les bornes et pour reculer/avancer. Vitesses 1, 0,75, 0,5, 0,25x. | Le plan ne prévoyait que ± 0,5 s. |
+| 9 | Pendant la lecture, le segment sélectionné suit la tête de lecture ; après « Couper ici », la seconde moitié est sélectionnée. | Évite d'aller chercher le segment à la main. |

@@ -3,6 +3,9 @@ export interface YTPlayer {
   getCurrentTime(): number
   getDuration(): number
   seekTo(seconds: number, allowSeekAhead: boolean): void
+  setPlaybackRate(rate: number): void
+  /** 1 = lecture, 2 = pause. */
+  getPlayerState(): number
   playVideo(): void
   pauseVideo(): void
   mute(): void

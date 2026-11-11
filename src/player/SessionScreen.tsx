@@ -1,3 +1,4 @@
+import { FINISH, pick } from '../motivation/phrases'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -70,6 +71,7 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
   const mot = useMotivation()
   const unlocks = useLiveQuery(() => db.stickerUnlocks.toArray(), []) ?? []
   const [showPouch, setShowPouch] = useState(false)
+  const [finishPhrase] = useState(() => pick(FINISH, Math.floor(Math.random() * 1000)))
   const logged = useRef(false)
 
   useEffect(() => {
@@ -156,7 +158,7 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
     const counted = sessionCounts(session)
     return (
       <main className={s.end}>
-        <h1 style={{ fontSize: 34 }}>{session.partial ? 'Séance arrêtée' : 'Bravo, séance terminée !'}</h1>
+        <h1 style={{ fontSize: 34 }}>{session.partial ? 'Séance arrêtée' : finishPhrase}</h1>
         <div className={s.stats}>
           <div className={s.stat}><span className={s.statNum}>{fmt(session.activeMs)}</span><span className={s.hint}>durée active</span></div>
           <div className={s.stat}><span className={s.statNum}>{session.partial ? Math.min(cur + 1, plan.items.length) : plan.items.length}</span><span className={s.hint}>exercices</span></div>

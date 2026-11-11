@@ -6,6 +6,7 @@ import { db } from '../data/db'
 import { Thumb } from '../library/Thumb'
 import { formatDuration, workoutDurationSec } from '../library/workouts'
 import { composeExpress } from '../motivation/express'
+import { motivationPhrase, phraseSeed } from '../motivation/phrases'
 import { sessionsUntilNextPouch } from '../stickers/schedule'
 import { remainingThisWeek, weekDays } from '../motivation/streak'
 import { streakMessage, useMotivation } from '../motivation/useMotivation'
@@ -42,11 +43,12 @@ export function Home() {
   const nextSlotDay = [1, 2, 3, 4, 5, 6, 7].map((i) => (now.getDay() + i) % 7).find((d) => settings.slot.days.includes(d))
   const hello = now.getHours() < 18 ? 'Bonjour' : 'Bonsoir'
   const who = settings.userName.trim()
-  const greeting = who ? `${hello} ${who}, prête pour ta séance ?` : `${hello}, prête pour ta séance ?`
+  const greeting = who ? `${hello} ${who}` : hello
   const slotLine = slotToday
     ? `C'est ton jour ! Ton créneau est à ${hhmm(settings.slot.time)}. On y va ?`
     : nextSlotDay !== undefined ? `Prochain créneau : ${DAYS[nextSlotDay]} à ${hhmm(settings.slot.time)}.` : 'Choisis tes jours de créneau dans « Mon rythme ».'
   const msg = streakMessage(result)
+  const phrase = motivationPhrase({ slotToday, streak: result.streak, weekDone: result.current.validated }, phraseSeed(now))
   const left = remainingThisWeek(result, settings.weeklyGoal)
   const days = weekDays(result.current, now, settings.slot.days)
   const pct = Math.min(100, Math.round((result.current.count / settings.weeklyGoal) * 100))
@@ -58,7 +60,7 @@ export function Home() {
       <header className={h.top}>
         <div className={h.hello}>
           <h1>{greeting}</h1>
-          <p>{msg ?? slotLine}</p>
+          <p className={h.phrase}>{msg ?? phrase}</p>
         </div>
         <div className={h.pills}>
           {unrevealed > 0 && <Link to="/collection" className={[h.pill, h.pillGlow].join(' ')}>Une pochette t'attend</Link>}
@@ -98,6 +100,7 @@ export function Home() {
           <div className={h.week}>
             <div>
               <span className={h.eyebrow} style={{ color: 'var(--text-muted)' }}>Cette semaine</span>
+              <p className={h.slotLine}>{slotLine}</p>
               <div><span className={h.big}>{result.current.count} / {settings.weeklyGoal}</span><span className={h.unit}>séances</span></div>
             </div>
             <div className={h.days} role="list" aria-label="Jours de la semaine">

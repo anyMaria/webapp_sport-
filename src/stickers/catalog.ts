@@ -102,8 +102,13 @@ export const SHINY_SUFFIX = ':brillant'
 export const baseIdOf = (id: string) => id.split(':')[0]!
 export const isShiny = (id: string) => id.includes(SHINY_SUFFIX)
 
-const arts = import.meta.glob('./art/*.svg', { query: '?url', import: 'default', eager: true }) as Record<string, string>
+const arts = import.meta.glob('./art/*.{svg,png,jpg,jpeg,webp}', { query: '?url', import: 'default', eager: true }) as Record<string, string>
 /** URL du dessin d'un sticker (les doublons brillants partagent le dessin d'origine). */
 export function artUrl(id: string): string {
-  return arts[`./art/${baseIdOf(id)}.svg`] ?? ''
+  const base = baseIdOf(id)
+  for (const ext of ['svg', 'png', 'webp', 'jpg', 'jpeg']) {
+    const url = arts[`./art/${base}.${ext}`]
+    if (url) return url
+  }
+  return ''
 }

@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { db, saveSettings } from '../data/db'
 import { Screen } from '../app/Screen'
 import { SpaceNav } from './SpaceNav'
-import { Button } from '../ui/Button'
+import { Button, IconButton } from '../ui/Button'
 import { Switch } from '../ui/Switch'
 import { Stepper } from '../ui/Stepper'
 import { Row } from '../ui/Card'
 import { buildIcs, deliverIcs, slotKey } from '../motivation/ics'
 import { streakMessage, useMotivation } from '../motivation/useMotivation'
 import { APP_NAME } from '../lib/constants'
-import { addDays, weekKey } from '../motivation/weeks'
+import { dayKey } from '../motivation/weeks'
+import { addMonths, monthGrid } from '../motivation/month'
 import ui from '../ui/ui.module.css'
 import r from './rhythm.module.css'
 import s from '../app/app.module.css'
@@ -20,9 +21,9 @@ const WEEK_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const DAY_NAMES = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0] // lundi → dimanche, valeurs de getDay()
 
-/** Mon rythme : série, historique, créneau fixe, séance express de secours. */
+/** Mon rythme : le mois, la série, le créneau fixe, la séance express de secours. */
 export function Rhythm() {
-  const { settings, result } = useMotivation()
+  const { settings, result, logs } = useMotivation()
   const workouts = useLiveQuery(() => db.workouts.toArray(), []) ?? []
   const [msg, setMsg] = useState<string | null>(null)
   const slot = settings.slot
@@ -39,42 +40,45 @@ export function Rhythm() {
     setMsg(how === 'shared' ? 'Choisis « Calendrier » dans la feuille de partage pour ajouter l’événement.' : 'Fichier téléchargé : ouvre-le pour l’ajouter à ton calendrier.')
   }
 
-  // Les quatre dernières semaines : la semaine en cours et les trois précédentes.
-  const monday = result.current.monday
-  const history = [3, 2, 1, 0].map((back) => {
-    const m = addDays(monday, -7 * back)
-    const known = result.weeks.find((w) => w.key === weekKey(m))
-    return { label: back === 0 ? 'Cette sem.' : `−${back} sem.`, days: known?.days ?? [], jokered: known?.jokered ?? false, current: back === 0 }
-  })
+  // Ce mois-ci : les jours avec une séance comptée, et la navigation d'un mois à l'autre.
+  const today = new Date()
+  const [shown, setShown] = useState({ year: today.getFullYear(), month: today.getMonth() })
+  const doneKeys = new Set(logs.filter((l) => l.counted).map((l) => dayKey(new Date(l.startedAt))))
+  const grid = monthGrid(shown.year, shown.month, doneKeys, slot.days, today)
+  const doneCount = grid.filter((c) => c.done).length
+  const isCurrent = shown.year === today.getFullYear() && shown.month === today.getMonth()
+  const monthName = new Date(shown.year, shown.month, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
 
   return (
     <Screen title="Mon rythme" subtitle="La série compte les semaines, pas les jours : un jour sans séance ne casse rien.">
       <SpaceNav />
       <div className={s.grid}>
-        <section className={r.card} aria-label="Série en cours">
-          <span className={r.label}>Série en cours</span>
-          <div className={r.streakRow}>
-            <span className={r.streak}>{result.streak}</span>
-            <span className={r.streakText}>semaine{result.streak > 1 ? 's' : ''}<br />d'affilée</span>
+        <section className={r.card} aria-label={isCurrent ? 'Ce mois-ci' : monthName}>
+          <span className={r.label}>{isCurrent ? 'Ce mois-ci' : 'Un autre mois'}</span>
+          <div className={r.monthBar}>
+            <IconButton label="Mois précédent" onClick={() => setShown((m) => addMonths(m.year, m.month, -1))}><ChevronLeft size={22} aria-hidden="true" /></IconButton>
+            <strong className={r.monthName} aria-live="polite">{monthName}</strong>
+            <IconButton label="Mois suivant" onClick={() => setShown((m) => addMonths(m.year, m.month, 1))}><ChevronRight size={22} aria-hidden="true" /></IconButton>
           </div>
-          <span className={ui.hint}>Objectif : {settings.weeklyGoal} séances par semaine</span>
-          {message && <p role="status" className={[s.msg, s.msgOk].join(' ')}>{message}</p>}
-
-          <div className={r.history} role="list" aria-label="Historique des dernières semaines">
-            {history.map((w, i) => (
-              <div key={i} className={r.histRow} role="listitem">
-                <span className={r.histLabel} style={{ fontWeight: w.current ? 600 : 400 }}>{w.label}</span>
-                <div className={r.dots}>
-                  {WEEK_LABELS.map((l, d) => (
-                    <span key={d} className={[r.dot, w.days.includes(d) ? r.dotOn : ''].join(' ')} aria-label={`${l}${w.days.includes(d) ? ' : séance faite' : ''}`}>
-                      {w.days.includes(d) && <Check size={14} strokeWidth={3} aria-hidden="true" />}
-                    </span>
-                  ))}
-                </div>
-                {w.jokered && <span className={r.joker}>Joker</span>}
-              </div>
+          <div className={r.grid} role="grid" aria-label={`Séances de ${monthName}`}>
+            {WEEK_LABELS.map((l, i) => <span key={`h${i}`} className={r.gridHead} aria-hidden="true">{l}</span>)}
+            {grid.map((c) => (
+              <span
+                key={c.key}
+                role="gridcell"
+                aria-label={c.inMonth ? `${c.day}${c.done ? ' : séance faite' : c.slot ? ' : créneau prévu' : ''}` : undefined}
+                className={[r.cell, !c.inMonth ? r.cellPad : '', c.done ? r.cellDone : '', c.today ? r.cellToday : '', c.slot && !c.done ? r.cellSlot : ''].join(' ')}
+              >
+                {c.done ? <Check size={16} strokeWidth={3} aria-hidden="true" /> : c.day || ''}
+              </span>
             ))}
           </div>
+          <span className={ui.hint}>{doneCount === 0 ? 'Aucune séance ce mois-là.' : `${doneCount} séance${doneCount > 1 ? 's' : ''} ce mois-là.`} Trait pointillé : jour de créneau.</span>
+          <div className={r.streakRow}>
+            <span className={r.streak}>{result.streak}</span>
+            <span className={r.streakText}>semaine{result.streak > 1 ? 's' : ''} d'affilée<br /><span className={ui.hint}>Objectif : {settings.weeklyGoal} séances par semaine</span></span>
+          </div>
+          {message && <p role="status" className={[s.msg, s.msgOk].join(' ')}>{message}</p>}
           <div className={r.note}>Joker : une fois par mois, une semaine à 1 séance compte quand même.</div>
         </section>
 

@@ -87,6 +87,7 @@ export interface Settings {
   reminder: boolean // alarme 10 minutes avant, dans le fichier du calendrier
   expressFallback: boolean // bouton « Version express » sur l'accueil
   slotExportedKey?: string // créneau du dernier export au calendrier
+  podium?: (string | null)[] // top 1, 2 et 3 de la collection (identifiants de stickers)
 }
 
 /** Vignette stockée à part pour ne pas alourdir les exercices. */

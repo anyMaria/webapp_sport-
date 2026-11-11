@@ -12,3 +12,15 @@
 .badge { position: absolute; bottom: 4px; right: 4px; padding: 3px 8px; border-radius: 10px; background: var(--transition); color: var(--on-accent); font-size: 13px; font-weight: 600; }
 .name { font-size: 15px; font-weight: 600; }
 .cond { font-size: 13px; color: var(--text-muted); line-height: 1.3; }
+.podium { background: var(--surface); border-radius: var(--radius-l); padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.podiumRow { display: flex; justify-content: center; align-items: flex-end; gap: 16px; }
+.pod { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 180px; }
+.podSlot { width: 100%; aspect-ratio: 1; border-radius: var(--radius-m); background: var(--surface-2); border: 2px dashed var(--border); color: var(--text-muted); font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 8px; }
+.podSlot img { width: 100%; height: 100%; object-fit: contain; }
+.podStep { width: 100%; border-radius: 14px 14px 0 0; background: var(--line); color: var(--text); font-family: var(--font-title); font-weight: 700; font-size: 28px; text-align: center; padding: 8px 0; }
+.pod1 .podStep { background: var(--transition); color: var(--on-accent); height: 88px; }
+.pod2 .podStep { height: 64px; }
+.pod3 .podStep { height: 48px; }
+.picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.pickBtn { aspect-ratio: 1; border-radius: var(--radius-s); border: 2px solid var(--border); background: var(--surface-2); padding: 6px; cursor: pointer; }
+.pickBtn img { width: 100%; height: 100%; object-fit: contain; }

@@ -52,3 +52,5 @@
 .pillStrong { display: flex; align-items: center; gap: 8px; min-height: 60px; padding: 0 22px; border-radius: 30px; background: var(--surface-2); border: 2px solid var(--effort); color: var(--effort); font-weight: 600; font-size: 17px; text-decoration: none; }
 .navCard { flex: 1; min-width: 180px; display: flex; flex-direction: row; align-items: center; gap: 12px; min-height: var(--touch); padding: 10px 18px; border-radius: var(--radius-m); background: var(--surface); color: var(--effort); text-decoration: none; }
 .navTitle { font-family: var(--font-title); font-weight: 600; font-size: 20px; color: var(--text); }
+.phrase { font-size: 15px !important; }
+.slotLine { margin: 6px 0 0; font-size: 15px; font-weight: 600; color: var(--transition); }

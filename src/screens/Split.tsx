@@ -18,6 +18,7 @@ import { Switch } from '../ui/Switch'
 import { Stepper } from '../ui/Stepper'
 import { analyzeVideo } from '../import/detect/analyze'
 import { getVideoFile } from '../data/opfs'
+import { aiLabelsEnabled, extractFrames, requestLabels, type Label } from '../import/aiLabels'
 import { Button, IconButton } from '../ui/Button'
 import ui from '../ui/ui.module.css'
 import c from '../import/import.module.css'
@@ -55,6 +56,12 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [rhythmStart, setRhythmStart] = useState(0)
   const [progress, setProgress] = useState<{ label: string; ratio: number | null } | null>(null)
   const [notes, setNotes] = useState<string[]>([])
+  const [aiOn, setAiOn] = useState(false)
+  const [aiConfirm, setAiConfirm] = useState(false)
+  const [aiBusy, setAiBusy] = useState(false)
+  const [aiProposals, setAiProposals] = useState<Label[] | null>(null)
+  const [aiError, setAiError] = useState<string | null>(null)
+  useEffect(() => { if (source.kind === 'file') void aiLabelsEnabled().then(setAiOn) }, [source.kind])
   const abort = useRef<AbortController | null>(null)
   const autoRan = useRef(false)
 
@@ -160,6 +167,24 @@ function SplitEditor({ source }: { source: VideoSource }) {
     return () => { stop = true; cancelAnimationFrame(h); window.clearInterval(id) }
   }, [start, end, url, isYT])
 
+  const runAi = async () => {
+    if (!source.opfsPath) return
+    setAiConfirm(false); setAiBusy(true); setAiError(null)
+    const ctl = new AbortController()
+    abort.current = ctl
+    try {
+      const file = await getVideoFile(source.opfsPath)
+      const frames = await extractFrames(file, keptSegments(segs), ctl.signal)
+      const labels = await requestLabels(frames, ctl.signal)
+      if (!labels.length) setAiError("L'IA n'a rien proposé. Nomme les exercices à la main.")
+      else setAiProposals(labels)
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') setAiError((e as Error).message || 'Le nommage par IA a échoué.')
+    } finally {
+      setAiBusy(false)
+    }
+  }
+
   const patch = (id: string, p: Partial<Segment>) => setSegs((l) => l.map((x) => (x.id === id ? { ...x, ...p } : x)))
   const keptCount = keptSegments(segs).length
 
@@ -257,6 +282,35 @@ function SplitEditor({ source }: { source: VideoSource }) {
               </div>
             )}
             {notes.map((n) => <p key={n} className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
+            {aiOn && !aiProposals && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {aiConfirm ? (
+                  <div role="alertdialog" aria-label="Envoyer des images à un service d'IA" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <p className={s.msg}>Des images de cette vidéo (2 ou 3 par exercice gardé) vont quitter l'iPad pour être envoyées à un service d'IA. Ce service est payant à l'usage.</p>
+                    <div className={s.actions}><Button variant="primary" onClick={() => void runAi()}>Envoyer les images</Button><Button onClick={() => setAiConfirm(false)}>Annuler</Button></div>
+                  </div>
+                ) : (
+                  <Button disabled={aiBusy || keptCount === 0} onClick={() => setAiConfirm(true)}>{aiBusy ? 'Nommage en cours…' : "Nommer les exercices avec l'IA"}</Button>
+                )}
+                {aiError && <p role="alert" className={[s.msg, s.msgErr].join(' ')}>{aiError}</p>}
+              </div>
+            )}
+            {aiProposals && (
+              <div role="group" aria-label="Propositions de l'IA" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <span className={c.label}>Propositions : vérifie et corrige</span>
+                {aiProposals.map((p) => (
+                  <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <input aria-label="Nom proposé" value={p.name} onChange={(e) => setAiProposals(aiProposals.map((x) => (x.id === p.id ? { ...x, name: e.target.value } : x)))} style={{ minHeight: 48, borderRadius: 14, border: '2px solid var(--border)', background: 'var(--bg-deep)', padding: '0 12px', color: 'inherit' }} />
+                    <input aria-label="Consigne proposée" maxLength={CUE_MAX} value={p.cue} onChange={(e) => setAiProposals(aiProposals.map((x) => (x.id === p.id ? { ...x, cue: clampCue(e.target.value) } : x)))} style={{ minHeight: 48, borderRadius: 14, border: '2px solid var(--border)', background: 'var(--bg-deep)', padding: '0 12px', color: 'inherit' }} />
+                  </div>
+                ))}
+                <div className={s.actions}>
+                  <Button variant="primary" onClick={() => { setSegs((l) => l.map((x) => { const p = aiProposals.find((y) => y.id === x.id); return p ? { ...x, name: p.name, cue: p.cue } : x })); setAiProposals(null) }}>Valider ces noms</Button>
+                  <Button onClick={() => setAiProposals(null)}>Ignorer</Button>
+                </div>
+                <p className={ui.hint} style={{ margin: 0 }}>Rien n'est enregistré tant que tu n'as pas validé, puis enregistré les exercices.</p>
+              </div>
+            )}
           </div>
           )}
 

@@ -132,6 +132,9 @@ export function Settings() {
             <Row label="Espace utilisé" hint={storage ? (storage.persisted ? 'Stockage protégé par l’appareil.' : 'Stockage non protégé : iOS peut le vider si l’espace manque.') : undefined}>
               <span style={{ fontFamily: 'var(--font-title)', fontWeight: 600, fontSize: 20 }}>{storage ? `${formatBytes(storage.usage)} sur ${formatBytes(storage.quota)}` : '…'}</span>
             </Row>
+            {storage && storage.quota > 0 && storage.usage / storage.quota >= 0.8 && (
+              <p role="alert" className={[s.msg, s.msgErr].join(' ')} style={{ color: 'var(--transition)' }}>Il reste peu d'espace sur l'iPad. Supprime une vidéo dont tu n'as plus besoin.</p>
+            )}
             {storage && !storage.persisted && (
               <div className={s.actions}>
                 <Button onClick={() => void requestPersist().then(refreshStorage)}>Protéger mes données</Button>

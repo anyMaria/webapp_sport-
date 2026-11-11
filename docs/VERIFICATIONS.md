@@ -159,3 +159,22 @@ Pour voir la révélation sans attendre une semaine validée : Réglages, « Pag
 | 7.16 | Les dessins. | Dis-moi s'ils te conviennent comme emplacements provisoires. Tu les remplaceras par les tiens (mêmes noms de fichiers dans `src/stickers/art/`). |
 
 Déjà vérifié sur ordinateur : 11 tests automatiques (catalogue de 24 stickers, tirage sans doublon, doublons brillants, une pochette par semaine, paliers de série, bonus, pas de double déblocage). Séquence jouée dans un navigateur : maintien trop court qui retombe, ouverture, apparition, inclinaison, collage, compteur. **La fluidité à 60 images par seconde n'est pas mesurée : seul l'iPad peut le dire.**
+
+## Phase 8 : finitions
+
+| # | Action | Résultat attendu |
+|---|---|---|
+| 8.1 | Parcours chaque écran sans données (app neuve, ou après une restauration vide) : accueil, bibliothèque, collection, mon rythme, réglages. | Aucun écran vide sans explication : chaque état vide dit quoi faire ensuite. |
+| 8.2 | Navigue au clavier (clavier Bluetooth) ou avec le contrôle de sélection : Tab. | Un contour menthe bien visible entoure l'élément actif. |
+| 8.3 | Active VoiceOver, passe sur les boutons ronds, les interrupteurs, les pastilles de jours, la frise. | Chaque bouton à icône a un nom (« Retour à l'accueil », « Monter »…), les interrupteurs disent activé ou désactivé, la phase est lue (« Effort », « Transition »). |
+| 8.4 | Texte en grand (Réglages iPad, Affichage, Taille du texte). | L'interface reste utilisable, rien d'illisible ni de coupé. |
+| 8.5 | Essaie d'importer une vidéo plus grosse que l'espace libre (ou remplis l'iPad). | Message clair « Pas assez de place », rien de copié à moitié. |
+| 8.6 | Réglages, quand l'espace dépasse 80 %. | Avertissement « Il reste peu d'espace ». |
+| 8.7 | Coupe le réseau, lance un exercice YouTube, puis rouvre l'app. | Messages clairs, l'app s'ouvre. Rien ne plante. |
+| 8.8 | Cherche un écran qui affiche une erreur technique ou un texte culpabilisant. | Il n'y en a aucun. Dis-moi s'il y en a. |
+| 8.9 | Bouton « Nommer les exercices avec l'IA ». | **Il n'apparaît pas tant que la clé et le modèle ne sont pas configurés sur Vercel.** C'est voulu. Pour l'activer : variables `ANTHROPIC_API_KEY` et `LABEL_MODEL` dans Vercel, puis redéploiement. |
+| 8.10 | Après activation : le bouton, la confirmation, les propositions. | Avant l'envoi, un message dit que des images quittent l'appareil et que c'est payant. Rien n'est appliqué avant « Valider ces noms ». |
+
+Avant d'activer l'IA : je n'ai pas pu lire la documentation d'Anthropic depuis ma session. Le nom du modèle, les limites d'images et l'en-tête de version sont à vérifier, et le coût à chiffrer (le plan l'exige). Rien n'est envoyé à un service tant que ce n'est pas activé.
+
+Déjà vérifié : 18 tests de contraste sur toutes les paires texte/fond, 3 tests de la fonction serveur sans clé, build de production, vérifications des phases précédentes inchangées (123 tests au total).

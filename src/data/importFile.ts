@@ -1,5 +1,6 @@
 import { db } from './db'
 import { writeVideoFile, removeVideoFile } from './opfs'
+import { assertSpaceFor, friendlyWriteError } from './space'
 import type { VideoSource } from './types'
 
 export const newId = () => crypto.randomUUID()
@@ -48,6 +49,7 @@ export function makeThumb(file: Blob, atSec: number): Promise<Blob> {
 
 /** Importe un fichier vidéo : copie dans OPFS (avec progression) puis crée la source. En cas d'échec, rien ne reste. */
 export async function importVideoFile(file: File, originLabel: VideoSource['originLabel'], onProgress?: (ratio: number) => void): Promise<VideoSource> {
+  await assertSpaceFor(file.size)
   const meta = await probeVideo(file)
   const id = newId()
   const ext = file.name.includes('.') ? file.name.split('.').pop()!.toLowerCase().replace(/[^a-z0-9]/g, '') : 'mp4'
@@ -56,7 +58,7 @@ export async function importVideoFile(file: File, originLabel: VideoSource['orig
     await writeVideoFile(file, opfsPath, onProgress)
   } catch (e) {
     await removeVideoFile(opfsPath)
-    throw e
+    throw new Error(friendlyWriteError(e), { cause: e })
   }
   const source: VideoSource = {
     id, kind: 'file', title: file.name.replace(/\.[^.]+$/, ''), durationSec: meta.durationSec,

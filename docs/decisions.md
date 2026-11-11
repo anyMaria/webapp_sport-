@@ -30,3 +30,8 @@ Décisions prises par Claude Code quand le plan ne tranchait pas. Option la plus
 | 7 | Dessins SVG générés par un script, simples, contour clair épais. À remplacer par les illustrations de l'utilisatrice, mêmes noms de fichiers dans `src/stickers/art/`. | Prévu par le plan. |
 | 7 | Reflet holographique volontairement discret (opacité réduite) : la pleine intensité écrasait les couleurs du dessin. | À régler selon ton avis, dans `reveal.module.css` (`.rainbow`). |
 | 7 | Pochette : aplats sans dégradé, avec un reflet qui la traverse. | Le plan exclut les dégradés décoratifs hors reflet des stickers. |
+| 8 | Nommage par IA : fonction `api/label-segments.ts`, clé (`ANTHROPIC_API_KEY`) et modèle (`LABEL_MODEL`) en variables d'environnement Vercel, aucun nom de modèle écrit dans le code. | Le plan interdit d'écrire modèle et limites d'images de mémoire. Je n'ai pas pu lire la documentation (docs.anthropic.com hors du réseau autorisé de la session). |
+| 8 | Limites d'images prudentes côté serveur (40 segments, 3 images par segment, 400 000 caractères base64 par image) et en-tête `anthropic-version` écrit de mémoire. | À vérifier dans la documentation avant d'activer. Le coût à l'usage est à chiffrer avant activation (plan, section 13). |
+| 8 | Sans clé ou sans modèle, la fonction répond `enabled: false` et le bouton IA n'apparaît pas. Les propositions s'éditent et se valident avant d'être appliquées. | Plan, section 8. |
+| 8 | Import refusé avec un message clair si la vidéo ne tient pas dans l'espace restant ; alerte à 80 % d'espace utilisé dans les Réglages. | Gestion de l'espace disque (phase 8). |
+| 8 | Contraste vérifié par un test automatique sur les paires texte/fond des jetons (4,5:1). | Plan, section 11. |

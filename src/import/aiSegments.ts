@@ -14,8 +14,8 @@ const ROWS = 4
 const PER_SHEET = COLS * ROWS
 /** Au plus 5 planches (certains services limitent le nombre d'images) : 100 images au plus. */
 export const MAX_FRAMES = 5 * PER_SHEET
-/** Une image par seconde jusqu'à 100 s de vidéo (les exercices TikTok durent quelques secondes), puis plus espacées. */
-export const frameCount = (durationSec: number) => Math.min(MAX_FRAMES, Math.max(8, Math.round(durationSec)))
+/** Deux images par seconde jusqu'à 50 s de vidéo (les exercices TikTok durent quelques secondes), puis plus espacées. */
+export const frameCount = (durationSec: number) => Math.min(MAX_FRAMES, Math.max(8, Math.round(durationSec * 2)))
 
 /** Planches d'images (grille de 5 x 4, 240 px au plus par image), l'instant écrit sur chaque image. */
 export async function sampleSheets(file: Blob, durationSec: number, signal: AbortSignal, onProgress: (ratio: number) => void): Promise<Sheet[]> {

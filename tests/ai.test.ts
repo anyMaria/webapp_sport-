@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import handler, { parseFound, parseLabels, pickVisionModel, whyEmpty } from '../api/ai'
+import handler, { exercisesFromFrames, parseFound, parseLabels, pickGeminiModel, pickVisionModel, whyEmpty } from '../api/ai'
 
 function call(method: string, body?: unknown, query?: Record<string, string>) {
   let status = 0
@@ -41,5 +41,32 @@ describe('explication d\'une réponse vide', () => {
     expect(whyEmpty({ text: '<think>long</think>', finish: 'length' })).toContain('trop réfléchi')
     expect(whyEmpty({ text: 'Je ne vois pas d\'exercice.', finish: 'stop' })).toBe("Réponse du modèle : « Je ne vois pas d'exercice. »")
     expect(whyEmpty({ text: '', finish: 'stop' })).toContain('rien répondu')
+  })
+})
+
+describe('une étiquette par image', () => {
+  const times = [0.25, 0.75, 1.25, 1.75, 2.25, 2.75, 3.25, 3.75, 4.25, 4.75]
+  it('regroupe les images, place les limites à mi-chemin, ignore le 0', () => {
+    const text = '{"frames":[0,0,1,1,1,2,2,2,0,0],"exercises":[{"id":1,"name":"Flexion","cue":"Dos long"},{"id":2,"name":"Chien tête en bas"}]}'
+    expect(exercisesFromFrames(text, times, 5)).toEqual([
+      { start: 1, end: 2.5, name: 'Flexion', cue: 'Dos long' },
+      { start: 2.5, end: 4, name: 'Chien tête en bas', cue: '' },
+    ])
+  })
+  it('lisse une image isolée', () => {
+    const r = exercisesFromFrames('{"frames":[1,1,1,2,1,1,1,1,1,1],"exercises":[]}', times, 5)
+    expect(r).toHaveLength(1)
+    expect(r[0]).toMatchObject({ start: 0, end: 5, name: 'Exercice 1' })
+  })
+  it('refuse un nombre d\'étiquettes différent du nombre d\'images', () => {
+    expect(exercisesFromFrames('{"frames":[1,2],"exercises":[]}', times, 5)).toEqual([])
+    expect(exercisesFromFrames('pas de json', times, 5)).toEqual([])
+  })
+})
+
+describe('choix du modèle Gemini', () => {
+  it('prend le flash le plus récent, ni lite ni image', () => {
+    expect(pickGeminiModel(['models/gemini-2.0-flash', 'models/gemini-2.5-flash', 'models/gemini-2.5-flash-lite', 'models/gemini-2.5-flash-image', 'models/text-embedding-004'])).toBe('gemini-2.5-flash')
+    expect(pickGeminiModel(['models/text-embedding-004'])).toBeNull()
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSegments, frameCount } from './aiSegments'
+import { buildSegments, frameCount, snapBoundaries } from './aiSegments'
 
 describe('découpe par IA', () => {
   it('couvre toute la vidéo : exercices gardés, trous en pauses retirées', () => {
@@ -18,10 +18,17 @@ describe('découpe par IA', () => {
     expect(s).toHaveLength(1)
     expect(s[0]!.kept).toBe(false)
   })
-  it('nombre d\'images borné', () => {
-    expect(frameCount(10)).toBe(8)
-    expect(frameCount(300)).toBe(60)
-    expect(frameCount(100000)).toBe(60)
-    expect(frameCount(90)).toBe(30)
+  it('nombre d\'images : une par seconde, borné', () => {
+    expect(frameCount(4)).toBe(8)
+    expect(frameCount(45)).toBe(45)
+    expect(frameCount(300)).toBe(100)
+    expect(frameCount(100000)).toBe(100)
+  })
+  it('cale les limites sur les changements d\'image proches et recolle les exercices qui s\'enchaînent', () => {
+    const f = snapBoundaries([{ start: 0.4, end: 6.2, name: 'A', cue: '' }, { start: 6.9, end: 14, name: 'B', cue: '' }], [0, 5.5, 14.2], 1.5)
+    expect(f.map((x) => [x.start, x.end])).toEqual([[0, 5.5], [5.5, 14.2]])
+  })
+  it('garde une limite sans changement d\'image proche', () => {
+    expect(snapBoundaries([{ start: 3, end: 9, name: 'A', cue: '' }], [20, 30], 1.5)[0]).toMatchObject({ start: 3, end: 9 })
   })
 })

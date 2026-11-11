@@ -18,7 +18,8 @@ import { Timeline } from '../import/Timeline'
 import { Stepper } from '../ui/Stepper'
 import { getVideoFile } from '../data/opfs'
 import { aiStatus, type AiStatus } from '../import/aiClient'
-import { buildSegments, requestSegments, sampleSheets } from '../import/aiSegments'
+import { buildSegments, requestSegments, sampleSheets, snapBoundaries } from '../import/aiSegments'
+import { analyzeShots } from '../import/detect/shots'
 import { extractFrames, requestLabels, type Label } from '../import/aiLabels'
 import { Button, IconButton } from '../ui/Button'
 import ui from '../ui/ui.module.css'
@@ -225,10 +226,16 @@ function SplitEditor({ source }: { source: VideoSource }) {
     setProgress({ label: 'Images de la vidéo', ratio: 0 })
     try {
       const file = await getVideoFile(source.opfsPath)
+      // Changements d'image détectés sur l'appareil (vidéos de moins de 5 min) : l'IA s'en sert pour placer les coupes.
+      let cuts: number[] = []
+      if (source.durationSec <= 300) {
+        setProgress({ label: "Changements d'image", ratio: 0 })
+        try { cuts = (await analyzeShots(file, source.durationSec, (ratio) => setProgress({ label: "Changements d'image", ratio }), ctl.signal)).boundaries.map((b) => b.t) } catch (e) { if ((e as Error).name === 'AbortError') throw e }
+      }
       const sheets = await sampleSheets(file, source.durationSec, ctl.signal, (ratio) => setProgress({ label: 'Images de la vidéo', ratio }))
       setProgress({ label: 'Réflexion de l\'IA', ratio: null })
-      const { exercises: found, note } = await requestSegments(sheets, source.durationSec, ctl.signal)
-      const next = buildSegments(found, source.durationSec)
+      const { exercises: found, note } = await requestSegments(sheets, source.durationSec, cuts, ctl.signal)
+      const next = buildSegments(snapBoundaries(found, cuts), source.durationSec)
       if (!next.some((x) => x.kept)) setNotes(["L'IA n'a repéré aucun exercice.", ...(note ? [note] : []), 'Coupe à la main, ou essaie « Rythme régulier ».'])
       else {
         setSegs(next); setSelId(next.find((x) => x.kept)?.id ?? next[0]!.id)

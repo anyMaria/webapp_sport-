@@ -138,19 +138,21 @@ export function parseLabels(rawText: string, ids: string[]): Label[] {
 }
 
 interface Sheet { image: string; times: number[] }
+const MAX_TIMES_PER_SHEET = 25
 
-function parseSegmentsBody(b: unknown): { sheets: Sheet[]; duration: number } | null {
-  const o = b as { sheets?: unknown; duration?: unknown } | null
+function parseSegmentsBody(b: unknown): { sheets: Sheet[]; duration: number; cuts: number[] } | null {
+  const o = b as { sheets?: unknown; duration?: unknown; cuts?: unknown } | null
   const duration = Number(o?.duration)
   if (!Number.isFinite(duration) || duration <= 0 || duration > 4 * 3600) return null
   if (!Array.isArray(o?.sheets) || o.sheets.length < 1 || o.sheets.length > MAX_SHEETS) return null
   const sheets: Sheet[] = []
   for (const s of o.sheets as Partial<Sheet>[]) {
-    if (!b64ok(s.image) || !Array.isArray(s.times) || s.times.length < 1 || s.times.length > 16) return null
+    if (!b64ok(s.image) || !Array.isArray(s.times) || s.times.length < 1 || s.times.length > MAX_TIMES_PER_SHEET) return null
     if (s.times.some((t) => typeof t !== 'number' || !Number.isFinite(t) || t < 0 || t > duration + 1)) return null
     sheets.push({ image: s.image, times: s.times })
   }
-  return { sheets, duration }
+  const cuts = Array.isArray(o?.cuts) ? (o.cuts as unknown[]).filter((c): c is number => typeof c === 'number' && Number.isFinite(c) && c >= 0 && c <= duration).slice(0, 200).map((c) => Math.round(c * 10) / 10) : []
+  return { sheets, duration, cuts }
 }
 
 function parseLabelsBody(b: unknown): { id: string; image: string }[] | null {
@@ -192,13 +194,20 @@ export default async function handler(req: Req, res: Res): Promise<void> {
   if (task === 'segments') {
     const body = parseSegmentsBody(req.body)
     if (!body) return res.status(400).json({ error: 'Requête invalide.' })
+    const frames = body.sheets.reduce((n, x) => n + x.times.length, 0)
+    const step = Math.round((body.duration / Math.max(1, frames)) * 10) / 10
+    const cutsText = body.cuts.length
+      ? `Changements d'image détectés automatiquement (en secondes) : ${body.cuts.join(', ')}. Les exercices commencent et finissent souvent à ces instants : appuie-toi dessus pour placer les débuts et les fins. `
+      : ''
     const content: Part[] = [{
       type: 'text',
       text:
-        `Voici ${body.sheets.length} planche(s) d'images extraites d'une vidéo d'exercices d'étirements ou de posture qui dure ${Math.round(body.duration)} secondes. ` +
+        `Voici ${body.sheets.length} planche(s) d'images extraites d'une vidéo d'exercices (étirements, posture, sport) qui dure ${Math.round(body.duration)} secondes, une image toutes les ${step} s environ. ` +
         "Chaque planche est une grille d'images lues de gauche à droite puis de haut en bas ; l'instant de chaque image (en secondes) est écrit dessus et rappelé dans la liste. " +
-        "Repère chaque exercice distinct, dans l'ordre. Ignore l'introduction, la conclusion et les moments sans exercice. " +
-        "Pour chacun : début et fin en secondes (sans chevauchement), nom court en français (40 caractères au plus) et consigne de 80 caractères au plus. " +
+        cutsText +
+        "Repère chaque exercice : un exercice est un mouvement ou une posture précise. Quand le mouvement ou la posture change, c'est un nouvel exercice, même s'il est court (quelques secondes) et même si le décor ne change pas. " +
+        "Il vaut mieux séparer deux exercices que d'en fusionner deux. Ignore seulement l'introduction, les écrans de texte et la conclusion. " +
+        "Pour chacun : début et fin en secondes (le début du suivant égale la fin du précédent quand ils s'enchaînent), nom court en français (40 caractères au plus) et consigne de 80 caractères au plus. " +
         'Réponds uniquement par un tableau JSON : [{"start":0,"end":30,"name":"…","cue":"…"}].',
     }]
     body.sheets.forEach((s, i) => {

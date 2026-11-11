@@ -9,19 +9,23 @@ export async function aiSegmentsEnabled(): Promise<boolean> {
   return (await aiStatus()).enabled
 }
 
-const COLS = 4
-const ROWS = 3
+const COLS = 5
+const ROWS = 4
 const PER_SHEET = COLS * ROWS
-/** Au plus 5 planches (certains services limitent le nombre d'images) : 60 images, une toutes les 3 s environ. */
+/** Au plus 5 planches (certains services limitent le nombre d'images) : 100 images au plus. */
 export const MAX_FRAMES = 5 * PER_SHEET
-export const frameCount = (durationSec: number) => Math.min(MAX_FRAMES, Math.max(8, Math.floor(durationSec / 3)))
+/** Une image par seconde jusqu'à 100 s de vidéo (les exercices TikTok durent quelques secondes), puis plus espacées. */
+export const frameCount = (durationSec: number) => Math.min(MAX_FRAMES, Math.max(8, Math.round(durationSec)))
 
-/** Planches d'images (grille de 4 x 3, 320 px par image, JPEG), l'instant écrit sur chaque image. */
+/** Planches d'images (grille de 5 x 4, 240 px au plus par image), l'instant écrit sur chaque image. */
 export async function sampleSheets(file: Blob, durationSec: number, signal: AbortSignal, onProgress: (ratio: number) => void): Promise<Sheet[]> {
   const { v, done } = await openHiddenVideo(file)
   try {
-    const w = 320
-    const h = Math.round((w * (v.videoHeight || 9)) / (v.videoWidth || 16))
+    const vw = v.videoWidth || 16
+    const vh = v.videoHeight || 9
+    const k = 240 / Math.max(vw, vh)
+    const w = Math.round(vw * k)
+    const h = Math.round(vh * k)
     const n = frameCount(durationSec)
     const sheets: Sheet[] = []
     let cv: HTMLCanvasElement | null = null
@@ -48,7 +52,7 @@ export async function sampleSheets(file: Blob, durationSec: number, signal: Abor
       const x = (slot % COLS) * w
       const y = Math.floor(slot / COLS) * h
       g!.drawImage(v, x, y, w, h)
-      drawTag(g!, `${Math.round(t)} s`, x + 4, y + 4)
+      drawTag(g!, `${t.toFixed(t < 100 ? 1 : 0)}`, x + 3, y + 3)
       times.push(t)
       if (times.length === PER_SHEET) flush()
       onProgress((i + 1) / n)
@@ -60,8 +64,8 @@ export async function sampleSheets(file: Blob, durationSec: number, signal: Abor
   }
 }
 
-export async function requestSegments(sheets: Sheet[], durationSec: number, signal: AbortSignal): Promise<{ exercises: Found[]; note?: string }> {
-  const body = await aiPost<{ exercises?: Found[]; note?: string }>({ task: 'segments', sheets, duration: durationSec }, signal)
+export async function requestSegments(sheets: Sheet[], durationSec: number, cuts: number[], signal: AbortSignal): Promise<{ exercises: Found[]; note?: string }> {
+  const body = await aiPost<{ exercises?: Found[]; note?: string }>({ task: 'segments', sheets, duration: durationSec, cuts: cuts.slice(0, 200) }, signal)
   return { exercises: body.exercises ?? [], note: body.note }
 }
 
@@ -92,4 +96,27 @@ export function buildSegments(found: Found[], durationSec: number): Segment[] {
   }
   gap(cursor, durationSec)
   return out
+}
+
+/**
+ * Cale les débuts et fins proposés par l'IA sur les changements d'image détectés localement (au plus `maxDist` s d'écart),
+ * puis recolle les exercices qui s'enchaînent (début du suivant = fin du précédent).
+ */
+export function snapBoundaries(found: Found[], cuts: number[], maxDist = 1.5): Found[] {
+  const snap = (t: number) => {
+    let best = t
+    let bd = maxDist + 1e-9
+    for (const c of cuts) {
+      const d = Math.abs(c - t)
+      if (d < bd) { bd = d; best = c }
+    }
+    return best
+  }
+  const out = [...found].sort((a, b) => a.start - b.start).map((f) => ({ ...f, start: snap(f.start), end: snap(f.end) }))
+  for (let i = 1; i < out.length; i++) {
+    const prev = out[i - 1]!
+    const cur = out[i]!
+    if (Math.abs(cur.start - prev.end) <= maxDist) cur.start = prev.end
+  }
+  return out.filter((f) => f.end > f.start)
 }

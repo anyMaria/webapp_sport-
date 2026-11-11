@@ -12,6 +12,8 @@ export interface Plan {
   items: PlayItem[]
   clips: Clip[]
   thumbIds: (string | undefined)[]
+  /** Miniature YouTube quand l'exercice n'a pas de vignette extraite. */
+  thumbYt: (string | undefined)[]
   /** Éléments sautés car l'exercice ou la vidéo n'existe plus. */
   missing: number
   isExpress: boolean
@@ -24,6 +26,7 @@ export async function buildPlan(workoutId: string): Promise<Plan | null> {
   const items: PlayItem[] = []
   const clips: Clip[] = []
   const thumbIds: (string | undefined)[] = []
+  const thumbYt: (string | undefined)[] = []
   let missing = 0
   for (const it of w.items) {
     const ex = await db.exercises.get(it.exerciseId)
@@ -31,9 +34,10 @@ export async function buildPlan(workoutId: string): Promise<Plan | null> {
     if (!ex || !src) { missing++; continue }
     items.push({ exerciseId: ex.id, name: ex.name, cue: ex.cue, durationSec: it.durationSec, restAfterSec: it.restAfterSec })
     thumbIds.push(ex.thumbId)
+    thumbYt.push(src.kind === 'youtube' ? src.youtubeId : undefined)
     if (src.kind === 'file' && src.opfsPath) clips.push({ kind: 'file', opfsPath: src.opfsPath, startSec: ex.startSec, endSec: ex.endSec })
     else if (src.kind === 'youtube' && src.youtubeId) clips.push({ kind: 'youtube', youtubeId: src.youtubeId, startSec: ex.startSec, endSec: ex.endSec })
     else clips.push({ kind: 'missing', startSec: ex.startSec, endSec: ex.endSec })
   }
-  return { workoutId: w.id, name: w.name, items, clips, thumbIds, missing, isExpress: w.isExpress }
+  return { workoutId: w.id, name: w.name, items, clips, thumbIds, thumbYt, missing, isExpress: w.isExpress }
 }

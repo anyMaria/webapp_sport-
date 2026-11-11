@@ -10,6 +10,10 @@ import {
   adjust, clampCue, CUE_MAX, durationOf, formatTime, keptSegments, mergeWithNext, splitAt, STEP_SEC, wholeVideo, type Segment,
 } from '../import/segments'
 import { Screen } from '../app/Screen'
+import { createYTPlayer, type YTPlayer } from '../video/youtube'
+import { parseChapters } from '../import/chapters'
+import { rhythmBoundaries } from '../import/detect/rhythm'
+import { mergeCandidates } from '../import/detect/merge'
 import { Switch } from '../ui/Switch'
 import { Stepper } from '../ui/Stepper'
 import { analyzeVideo } from '../import/detect/analyze'
@@ -32,7 +36,13 @@ export function Split() {
 function SplitEditor({ source }: { source: VideoSource }) {
   const nav = useNavigate()
   const { url, error } = useOpfsUrl(source.opfsPath)
-  const [segs, setSegs] = useState<Segment[]>(() => wholeVideo(source.durationSec))
+  const isYT = source.kind === 'youtube'
+  const [ytDur, setYtDur] = useState(source.durationSec)
+  const [ytError, setYtError] = useState<string | null>(null)
+  const [chapterText, setChapterText] = useState('')
+  const ytHost = useRef<HTMLDivElement>(null)
+  const ytRef = useRef<YTPlayer | null>(null)
+  const [segs, setSegs] = useState<Segment[]>(() => (isYT && !source.durationSec ? [] : wholeVideo(source.durationSec)))
   const [selId, setSelId] = useState(() => segs[0]?.id ?? '')
   const [pos, setPos] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -85,14 +95,56 @@ function SplitEditor({ source }: { source: VideoSource }) {
 
   const sel = segs.find((x) => x.id === selId)
   const selIndex = segs.findIndex((x) => x.id === selId)
-  const duration = source.durationSec
+  const duration = isYT ? ytDur : source.durationSec
+  const getTime = () => (isYT ? ytRef.current?.getCurrentTime() : video.current?.currentTime) ?? pos
 
-  // Aperçu du segment sélectionné, en boucle.
   const start = sel?.startSec
   const end = sel?.endSec
+
+  // YouTube : lecteur visible et piloté, créé une seule fois.
+  useEffect(() => {
+    if (!isYT || !source.youtubeId || !ytHost.current) return
+    let alive = true
+    createYTPlayer(ytHost.current, source.youtubeId)
+      .then((p) => {
+        if (!alive) { p.destroy(); return }
+        ytRef.current = p
+        const d = Math.floor(p.getDuration())
+        if (d > 0) {
+          setYtDur(d)
+          void db.sources.update(source.id, { durationSec: d })
+          setSegs((cur) => {
+            if (cur.length) return cur
+            const w = wholeVideo(d)
+            setSelId(w[0]!.id)
+            return w
+          })
+        }
+      })
+      .catch((e: Error) => alive && setYtError(e.message))
+    return () => { alive = false; ytRef.current?.destroy(); ytRef.current = null }
+  }, [isYT, source.youtubeId, source.id])
+
+  // YouTube : l'aperçu boucle sur le segment sélectionné (position lue toutes les 250 ms).
+  useEffect(() => {
+    if (!isYT || start === undefined || end === undefined) return
+    ytRef.current?.seekTo(start, true)
+    const id = window.setInterval(() => {
+      const p = ytRef.current
+      if (!p) return
+      try {
+        const t = p.getCurrentTime()
+        setPos(t)
+        if (t >= end - 0.3 || t < start - 1) p.seekTo(start, true)
+      } catch { /* pas prêt */ }
+    }, 250)
+    return () => window.clearInterval(id)
+  }, [isYT, start, end])
+
+  // Aperçu du segment sélectionné, en boucle.
   useEffect(() => {
     const v = video.current
-    if (!v || start === undefined || end === undefined || !url) return
+    if (isYT || !v || start === undefined || end === undefined || !url) return
     const toStart = () => { try { v.currentTime = start } catch { /* pas prêt */ } }
     toStart()
     void v.play().catch(() => undefined)
@@ -106,7 +158,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
     h = requestAnimationFrame(loop)
     const id = window.setInterval(() => setPos(v.currentTime), 250)
     return () => { stop = true; cancelAnimationFrame(h); window.clearInterval(id) }
-  }, [start, end, url])
+  }, [start, end, url, isYT])
 
   const patch = (id: string, p: Partial<Segment>) => setSegs((l) => l.map((x) => (x.id === id ? { ...x, ...p } : x)))
   const keptCount = keptSegments(segs).length
@@ -126,7 +178,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
           <IconButton label="Retour à l'import" onClick={() => nav('/import')}><span aria-hidden="true">‹</span></IconButton>
           <div>
             <h1 style={{ fontSize: 26 }}>Découper la vidéo</h1>
-            <p className={s.sub}>{source.title} · {formatTime(duration)} · {segs.length} segment{segs.length > 1 ? 's' : ''}</p>
+            <p className={s.sub}>{source.title} · {duration ? formatTime(duration) : 'durée inconnue'} · {segs.length} segment{segs.length > 1 ? 's' : ''}</p>
           </div>
         </div>
         <Button variant="primary" disabled={keptCount === 0 || saving} onClick={() => void save()}>
@@ -137,10 +189,46 @@ function SplitEditor({ source }: { source: VideoSource }) {
       <div className={c.cols}>
         <div className={c.left}>
           <div className={c.preview}>
-            {url && <video ref={video} src={url} muted playsInline aria-label="Aperçu du segment sélectionné" />}
-            {sel && <span className={c.time}>{formatTime(sel.startSec)} – {formatTime(sel.endSec)}</span>}
+            {isYT && <div ref={ytHost} style={{ position: 'absolute', inset: 0 }} />}
+            {ytError && <span role="alert" style={{ position: 'absolute', padding: 16, color: 'var(--transition)', textAlign: 'center' }}>{ytError}</span>}
+            {!isYT && url && <video ref={video} src={url} muted playsInline aria-label="Aperçu du segment sélectionné" />}
+            {sel && !isYT && <span className={c.time}>{formatTime(sel.startSec)} – {formatTime(sel.endSec)}</span>}
           </div>
 
+          {isYT ? (
+            <div className={c.card}>
+              <span className={c.label}>Marquage YouTube</span>
+              <p className={ui.hint} style={{ margin: 0 }}>L'analyse automatique n'est pas possible avec le lecteur YouTube : marque les changements à la main, par rythme régulier, ou avec les repères de la description.</p>
+              <div className={s.actions}>
+                <Button variant="primary" disabled={!duration} onClick={() => {
+                  const t = getTime()
+                  const host = segs.find((x) => t > x.startSec && t < x.endSec)
+                  if (host) setSegs(splitAt(segs, host.id, t))
+                }}>Marquer ici ({formatTime(pos)})</Button>
+              </div>
+              <label className={c.field}>Repères de la description (une ligne par exercice, ex. « 2:15 Chat-vache »)
+                <textarea value={chapterText} onChange={(e) => setChapterText(e.target.value)} rows={4} style={{ borderRadius: 14, border: '2px solid var(--border)', background: 'var(--bg-deep)', padding: 10, color: 'inherit', font: 'inherit' }} />
+              </label>
+              <div className={s.actions}>
+                <Button disabled={!duration || !chapterText.trim()} onClick={() => {
+                  const r = parseChapters(chapterText, duration)
+                  if (!r.length) { setNotes(['Aucun repère reconnu. Format attendu : « 2:15 Nom ».']); return }
+                  setSegs(r); setSelId(r[0]!.id); setNotes([`${r.length} repères importés.`])
+                }}>Importer les repères</Button>
+              </div>
+              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Effort</span><Stepper label="Durée d'effort" value={effort} min={5} max={120} step={5} unit="s" onChange={setEffort} /></div>
+              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Pause</span><Stepper label="Durée de pause" value={rest} min={0} max={60} step={5} unit="s" onChange={setRest} /></div>
+              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Premier exercice à</span><Stepper label="Début du premier exercice" value={rhythmStart} min={0} max={Math.max(0, duration - 5)} step={5} unit="s" onChange={setRhythmStart} /></div>
+              <div className={s.actions}>
+                <Button disabled={!duration} onClick={() => {
+                  const r = mergeCandidates(rhythmBoundaries({ effortSec: effort, restSec: rest, startSec: rhythmStart }, duration, []), duration)
+                  setSegs(r); setSelId(r[0]?.id ?? ''); setNotes(['Rythme régulier appliqué.'])
+                }}>Appliquer le rythme régulier</Button>
+                <Button onClick={() => { if (!duration) return; const w = wholeVideo(duration); setSegs(w); setSelId(w[0]!.id); setNotes([]) }}>Tout remettre à zéro</Button>
+              </div>
+              {notes.map((n) => <p key={n} className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
+            </div>
+          ) : (
           <div className={c.card}>
             <span className={c.label}>Pré-marquage automatique</span>
             <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Changements de plan</span><Switch on={useShots} onChange={setUseShots} label="Changements de plan" /></div>
@@ -170,11 +258,12 @@ function SplitEditor({ source }: { source: VideoSource }) {
             )}
             {notes.map((n) => <p key={n} className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
           </div>
+          )}
 
           {sel && (
             <div className={c.card}>
               <span className={c.label}>Segment sélectionné</span>
-              <input type="range" className={c.scrub} min={sel.startSec} max={sel.endSec} step={0.1} value={Math.min(Math.max(pos, sel.startSec), sel.endSec)} aria-label="Position dans le segment" onChange={(e) => { if (video.current) video.current.currentTime = Number(e.target.value); setPos(Number(e.target.value)) }} />
+              <input type="range" className={c.scrub} min={sel.startSec} max={sel.endSec} step={0.1} value={Math.min(Math.max(pos, sel.startSec), sel.endSec)} aria-label="Position dans le segment" onChange={(e) => { const t = Number(e.target.value); if (isYT) ytRef.current?.seekTo(t, true); else if (video.current) video.current.currentTime = t; setPos(t) }} />
               <div className={c.adjust} role="group" aria-label="Début">
                 <span className={c.label} style={{ width: 56 }}>Début</span>
                 <IconButton label="Début 0,5 s plus tôt" onClick={() => setSegs(adjust(segs, sel.id, 'start', -STEP_SEC, duration))}><Minus size={20} aria-hidden="true" /></IconButton>
@@ -188,7 +277,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
                 <IconButton label="Fin 0,5 s plus tard" onClick={() => setSegs(adjust(segs, sel.id, 'end', STEP_SEC, duration))}><Plus size={20} aria-hidden="true" /></IconButton>
               </div>
               <div className={s.actions}>
-                <Button onClick={() => { const next = splitAt(segs, sel.id, video.current?.currentTime ?? pos); setSegs(next) }}><Scissors size={18} aria-hidden="true" />Couper ici</Button>
+                <Button onClick={() => { const next = splitAt(segs, sel.id, getTime()); setSegs(next) }}><Scissors size={18} aria-hidden="true" />Couper ici</Button>
                 <Button disabled={selIndex >= segs.length - 1} onClick={() => setSegs(mergeWithNext(segs, sel.id))}><Merge size={18} aria-hidden="true" />Fusionner avec le suivant</Button>
               </div>
               <label className={c.field}>Consigne (lue par la voix, {CUE_MAX} caractères au plus)

@@ -27,6 +27,7 @@ export function Library() {
   const [confirm, setConfirm] = useState<{ kind: 'workout' | 'exercise'; id: string; name: string } | null>(null)
 
   const srcName = useMemo(() => new Map(sources.map((x) => [x.id, x.title])), [sources])
+  const srcYt = useMemo(() => new Map(sources.map((x) => [x.id, x.youtubeId])), [sources])
   const shown = exercises.filter((e) => (!tag || e.tags.includes(tag)) && (!sourceId || e.sourceId === sourceId) && e.name.toLowerCase().includes(q.trim().toLowerCase()))
 
   const doDelete = async () => {
@@ -96,7 +97,7 @@ export function Library() {
         <div className={c.exList}>
           {shown.map((e) => (
             <div key={e.id} className={c.ex}>
-              <Thumb id={e.thumbId} className={c.exThumb} />
+              <Thumb id={e.thumbId} youtubeId={srcYt.get(e.sourceId)} className={c.exThumb} />
               <div className={c.exMain}>
                 <input className={c.exName} value={e.name} aria-label={`Nom de l'exercice ${e.name}`} onChange={(ev) => void db.exercises.update(e.id, { name: ev.target.value })} />
                 <span className={c.meta}>{srcName.get(e.sourceId) ?? 'Vidéo supprimée'} · {formatTime(e.startSec)} – {formatTime(e.endSec)}{e.tags.length ? ` · ${e.tags.join(', ')}` : ''}</span>

@@ -14,3 +14,6 @@ Décisions prises par Claude Code quand le plan ne tranchait pas. Option la plus
 | 1 | Polices : sous-ensemble latin seulement, mises en cache par le service worker. | Les accents français sont couverts ; sans cela, les polices ne se chargeaient pas hors ligne. |
 | 1 | Accueil, Mon rythme, Collection, Bibliothèque : écrans provisoires qui disent à quelle phase ils arrivent. | Le plan réserve ces écrans aux phases 3, 6 et 7. |
 | 1 | Restauration : remplace tout, après confirmation, en une seule transaction. | Le plus simple et le plus sûr : un échec ne change rien. |
+| 5 | Pas de préchargement caché du lecteur YouTube : le suivant se charge à son tour, avec un court délai. | Le plan interdit de masquer le lecteur ; un lecteur invisible serait contraire à l'esprit de la règle. |
+| 5 | En séance, pour un exercice YouTube, pas de zone tactile ni d'assombrissement sur la vidéo, et les cartes sont placées sous le lecteur. | Le lecteur ne doit jamais être recouvert. La pause se fait par le bouton Pause. |
+| 5 | Titre d'une vidéo YouTube saisi à la main (facultatif), pas de requête vers YouTube pour le récupérer. | Pas de service tiers non prévu. La miniature vient de i.ytimg.com. |

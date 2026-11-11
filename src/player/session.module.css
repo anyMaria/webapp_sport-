@@ -1,6 +1,7 @@
 .root { display: flex; width: 100%; height: 100dvh; background: var(--bg); overflow: hidden; }
 .stage { position: relative; flex: 63 1 0; background: var(--bg-deep); display: flex; align-items: center; justify-content: center; min-width: 0; }
 .videoBox { position: relative; height: calc(100% - 116px); aspect-ratio: 9 / 16; max-width: 90%; background: var(--surface-2); border-radius: var(--radius-m); overflow: hidden; }
+.ytBox { position: absolute; top: 92px; left: 9%; right: 9%; height: auto; max-width: none; aspect-ratio: 16 / 9; background: #000; }
 .tapArea { position: absolute; inset: 0; border: none; background: transparent; padding: 0; cursor: pointer; z-index: 2; }
 .fab { position: absolute; z-index: 5; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; border-radius: 50%; }
 .quit { top: 28px; left: 28px; width: 56px; height: 56px; background: var(--surface-2); color: var(--text); }

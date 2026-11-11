@@ -9,6 +9,8 @@ import type { AudioMode } from '../data/types'
 import { plannedSec, sessionCounts, type SessionEffect } from '../engine/session'
 import { modeHasBeeps, modeHasVideoSound, modeHasVoice, playBeep, setAudioSession, speak, unlockAudio } from '../audio/beep'
 import { LoopVideo } from '../video/LoopVideo'
+import { LoopYT } from '../video/LoopYT'
+import { youtubeThumb } from '../video/youtube'
 import { useOpfsUrl } from '../video/useOpfsUrl'
 import { buildPlan, type Clip, type Plan } from './plan'
 import { useSessionStore } from './useSessionStore'
@@ -32,7 +34,8 @@ const fmt = (ms: number) => {
 function ClipLayer({ clip, active, paused, muted, dimmed }: { clip: Clip; active: boolean; paused: boolean; muted: boolean; dimmed: boolean }) {
   const { url, error } = useOpfsUrl(clip.kind === 'file' ? clip.opfsPath : undefined)
   if (clip.kind === 'youtube') {
-    return active ? <div className={s.placeholder}>Les exercices YouTube arrivent en phase 5.</div> : null
+    // Pas de préchargement caché : un lecteur YouTube n'est jamais masqué ni lancé hors de vue.
+    return active ? <LoopYT key={clip.youtubeId + clip.startSec} videoId={clip.youtubeId} startSec={clip.startSec} endSec={clip.endSec} paused={paused} muted={muted} /> : null
   }
   if (clip.kind === 'missing' || error) return active ? <div className={s.placeholder}>Vidéo introuvable. Touche « Suivant » pour la passer.</div> : null
   if (!url) return null
@@ -131,7 +134,8 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
 
   const askQuit = () => { if (phase === 'exercise' || phase === 'transition') send({ type: 'PAUSE', now: now() }); setConfirmQuit(true) }
 
-  const thumbUrls = useThumbUrls(plan.thumbIds)
+  const isYT = clips[cur]?.kind === 'youtube'
+  const thumbUrls = useThumbUrls(plan.thumbIds, plan.thumbYt)
 
   const ring = useMemo(() => {
     if (!session || session.phase === 'ready') return 0
@@ -163,11 +167,11 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
   return (
     <div className={s.root}>
       <div className={s.stage}>
-        <div className={s.videoBox}>
+        <div className={[s.videoBox, isYT ? s.ytBox : ''].join(' ')}>
           {clips.map((c, i) => (i === cur || i === cur + 1) && (
-            <ClipLayer key={i} clip={c} active={i === cur} paused={paused} muted={!modeHasVideoSound(mode)} dimmed={inTransition} />
+            <ClipLayer key={i} clip={c} active={i === cur} paused={paused} muted={!modeHasVideoSound(mode)} dimmed={inTransition && !isYT} />
           ))}
-          {phase !== 'ready' && <button className={s.tapArea} aria-label={phase === 'paused' ? 'Reprendre' : 'Mettre en pause'} onClick={toggle} />}
+          {phase !== 'ready' && !isYT && <button className={s.tapArea} aria-label={phase === 'paused' ? 'Reprendre' : 'Mettre en pause'} onClick={toggle} />}
         </div>
 
         <button className={[s.fab, s.quit].join(' ')} aria-label="Quitter la séance" onClick={askQuit}><X size={22} aria-hidden="true" /></button>
@@ -179,7 +183,7 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
         {clips[cur]?.kind === 'file' && phase !== 'ready' && <span className={s.origin}>Fichier · extrait {fmt(clips[cur]!.startSec * 1000)} – {fmt(clips[cur]!.endSec * 1000)}</span>}
 
         {phase === 'ready' && (
-          <div className={[s.card, s.center].join(' ')} role="dialog" aria-label="Démarrer la séance">
+          <div className={[s.card, isYT ? '' : s.center].join(' ')} role="dialog" aria-label="Démarrer la séance">
             <span className={s.eyebrow}>Séance</span>
             <h1 className={s.nextTitle} style={{ fontSize: 40 }}>{plan.name}</h1>
             <span className={s.sub}>{plan.items.length} exercices · {Math.round(plannedSec(session.config) / 60) || 1} min</span>
@@ -189,7 +193,7 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
         )}
 
         {phase === 'paused' && !confirmQuit && (
-          <div className={[s.card, s.center].join(' ')} role="status">
+          <div className={[s.card, isYT ? '' : s.center].join(' ')} role="status">
             <span className={s.eyebrow}>En pause</span>
             <button className={[s.big, s.bigPrimary].join(' ')} onClick={toggle}><Play size={22} fill="currentColor" aria-hidden="true" />Reprendre</button>
           </div>
@@ -220,7 +224,7 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
         )}
 
         {confirmQuit && (
-          <div className={[s.card, s.center].join(' ')} role="alertdialog" aria-label="Quitter la séance">
+          <div className={[s.card, isYT ? '' : s.center].join(' ')} role="alertdialog" aria-label="Quitter la séance">
             <span className={s.nextTitle}>Quitter la séance ?</span>
             <div className={s.btns}>
               <button className={[s.big, s.cardBtn].join(' ')} onClick={() => setConfirmQuit(false)}>Continuer</button>
@@ -281,19 +285,19 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
 }
 
 /** Vignettes des exercices : URL d'objet à partir de IndexedDB, révoquées au démontage. */
-function useThumbUrls(ids: (string | undefined)[]): (string | undefined)[] {
+function useThumbUrls(ids: (string | undefined)[], yt: (string | undefined)[]): (string | undefined)[] {
   const [urls, setUrls] = useState<(string | undefined)[]>([])
   useEffect(() => {
     let alive = true
     const made: string[] = []
-    void Promise.all(ids.map(async (id) => {
+    void Promise.all(ids.map(async (id, i) => {
       const t = id ? await db.thumbs.get(id) : undefined
-      if (!t) return undefined
+      if (!t) return yt[i] ? youtubeThumb(yt[i]!) : undefined
       const u = URL.createObjectURL(t.blob)
       made.push(u)
       return u
     })).then((r) => { if (alive) setUrls(r) })
     return () => { alive = false; made.forEach(URL.revokeObjectURL) }
-  }, [ids])
+  }, [ids, yt])
   return urls
 }

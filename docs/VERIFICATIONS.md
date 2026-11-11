@@ -87,3 +87,25 @@ Utilise 3 de tes vraies vidéos : une montée avec des coupures de plan, une ryt
 | 4.11 | Combien de segments faux ou manquants en moyenne ? | Note-le : ça servira à régler les seuils. |
 
 Déjà vérifié sur ordinateur : 18 tests automatiques sur des signaux synthétiques (silence de 1 s, silence trop court, bip de 300 ms, son trop long, hors bande, rythme, regroupement, rattachement, « Pause », intro retirée). Vidéo de test de 2 min : analyse en 6 s, 5 segments corrects. Le décodage audio de gros fichiers sur iPad n'est pas vérifié : c'est ce que le test 7 a fait échouer.
+
+## Phase 5 : YouTube intégré
+
+Cette phase demande une connexion. Je n'ai pas pu tester le lecteur YouTube lui-même (mon environnement n'a pas accès à YouTube) : tout ce qui touche au lecteur est à vérifier sur l'iPad. Prends une vidéo YouTube d'étirements dont la description contient des repères horaires (ex. « 2:15 Chat-vache »).
+
+| # | Action | Résultat attendu |
+|---|---|---|
+| 5.1 | Importer une vidéo, colle un lien YouTube (watch, youtu.be ou shorts), « Ajouter la vidéo ». | L'écran de découpage s'ouvre avec le lecteur YouTube visible. |
+| 5.2 | Colle un texte qui n'est pas un lien. | Message clair : lien non reconnu. |
+| 5.3 | Regarde le lecteur dans l'écran de découpage. | Il est entier, avec ses commandes et son titre, rien ne le recouvre. La durée s'affiche une fois le lecteur prêt. |
+| 5.4 | Touche « Marquer ici » à chaque changement d'exercice pendant la lecture. | Un segment est créé à chaque marque. |
+| 5.5 | Colle les repères de la description, « Importer les repères ». | Un segment par repère, avec le bon nom. Un texte sans repère donne un message d'erreur. |
+| 5.6 | Essaie « Appliquer le rythme régulier » (effort, pause, début). | Les segments sont créés, les pauses courtes sont proposées « Retiré ». |
+| 5.7 | Sélectionne un segment. | L'aperçu boucle sur ce segment (retour au début à ±0,3 s près), et − / + ajustent les bornes. |
+| 5.8 | Enregistre, puis regarde la bibliothèque. | Les exercices ont la miniature YouTube. |
+| 5.9 | Compose une séance mêlant un exercice YouTube et un exercice de fichier local, puis lance-la. | Les deux se jouent avec une boucle correcte. Note le délai de retour au début sur YouTube. |
+| 5.10 | Pendant un exercice YouTube, regarde l'écran de séance. | Le lecteur est visible, non recouvert. Les cartes de transition sont sous le lecteur. Le bouton Pause fonctionne. |
+| 5.11 | Passe d'un exercice YouTube à un autre exercice. | Court délai de chargement accepté. Dis-moi s'il est gênant. |
+| 5.12 | Mets l'iPad en mode avion puis lance un exercice YouTube. | Message clair « Pas de réseau », « Suivant » permet de passer. |
+| 5.13 | Modes audio avec un exercice YouTube. | Muet dans tous les modes sauf « Son de la vidéo ». Spotify continue tant que la vidéo est muette. |
+
+Déjà vérifié sur ordinateur : lecture des liens et des repères (9 tests automatiques), message d'erreur hors réseau dans l'écran de découpage et en séance, création de la source sans plantage.

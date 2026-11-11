@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import { Card, Row } from '../ui/Card'
 import { Button } from '../ui/Button'
-import { importVideoFile } from '../data/importFile'
+import { importVideoFile, newId } from '../data/importFile'
+import { db } from '../data/db'
+import { parseYouTubeId } from '../video/youtube'
 import { saveSegments } from '../import/saveExercises'
 import { wholeVideo } from '../import/segments'
 import { formatBytes } from '../data/opfs'
@@ -24,6 +26,9 @@ export function Import() {
   const [current, setCurrent] = useState<{ name: string; ratio: number } | null>(null)
   const [done, setDone] = useState<Done[]>([])
   const [errors, setErrors] = useState<string[]>([])
+  const [link, setLink] = useState('')
+  const [ytTitle, setYtTitle] = useState('')
+  const [linkError, setLinkError] = useState<string | null>(null)
 
   const importFiles = async (files: FileList | null) => {
     if (!files?.length) return
@@ -39,6 +44,14 @@ export function Import() {
     }
     setCurrent(null)
     if (input.current) input.current.value = ''
+  }
+
+  const addYouTube = async () => {
+    const id = parseYouTubeId(link)
+    if (!id) { setLinkError("Ce lien n'est pas reconnu. Colle l'adresse d'une vidéo YouTube."); return }
+    const source: VideoSource = { id: newId(), kind: 'youtube', title: ytTitle.trim() || 'Vidéo YouTube', durationSec: 0, originLabel: 'YouTube', youtubeId: id, createdAt: new Date().toISOString() }
+    await db.sources.put(source)
+    nav(`/decoupage/${source.id}`)
   }
 
   const keepWhole = async (d: Done) => {
@@ -66,6 +79,18 @@ export function Import() {
           </div>
         )}
         {errors.map((e) => <p key={e} role="alert" className={[s.msg, s.msgErr].join(' ')}>{e}</p>)}
+      </Card>
+
+      <Card title="Lien YouTube">
+        <p className={s.empty}>La vidéo reste chez YouTube et se lit dans leur lecteur, avec une connexion. Rien n'est téléchargé.</p>
+        <label className={ui.hint} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>Lien de la vidéo
+          <input value={link} onChange={(e) => { setLink(e.target.value); setLinkError(null) }} placeholder="https://youtu.be/…" inputMode="url" style={{ minHeight: 52, borderRadius: 14, border: '2px solid var(--border)', background: 'var(--bg-deep)', padding: '0 12px' }} />
+        </label>
+        <label className={ui.hint} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>Nom (facultatif)
+          <input value={ytTitle} onChange={(e) => setYtTitle(e.target.value)} placeholder="Étirements du dos" style={{ minHeight: 52, borderRadius: 14, border: '2px solid var(--border)', background: 'var(--bg-deep)', padding: '0 12px' }} />
+        </label>
+        {linkError && <p role="alert" className={[s.msg, s.msgErr].join(' ')}>{linkError}</p>}
+        <div className={s.actions}><Button variant="primary" onClick={() => void addYouTube()} disabled={!link.trim()}>Ajouter la vidéo</Button></div>
       </Card>
 
       {done.length > 0 && (

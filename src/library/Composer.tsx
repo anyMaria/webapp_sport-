@@ -27,6 +27,8 @@ const NONE: never[] = []
 function ComposerEditor({ id, existing }: { id: string; existing?: Workout }) {
   const nav = useNavigate()
   const exercises = useLiveQuery(() => db.exercises.toArray(), []) ?? NONE
+  const sources = useLiveQuery(() => db.sources.toArray(), []) ?? NONE
+  const ytOf = new Map(sources.map((x) => [x.id, x.youtubeId]))
   const [name, setName] = useState(existing?.name ?? 'Nouvelle séance')
   const [items, setItems] = useState<WorkoutItem[]>(existing?.items ?? [])
   const [express, setExpress] = useState(existing?.isExpress ?? false)
@@ -77,7 +79,7 @@ function ComposerEditor({ id, existing }: { id: string; existing?: Workout }) {
               const planned = Math.min(Math.round(e.endSec - e.startSec), 120) || DEFAULT_ITEM_SEC
               return (
                 <div key={e.id} className={c.ex}>
-                  <Thumb id={e.thumbId} className={c.exThumb} />
+                  <Thumb id={e.thumbId} youtubeId={ytOf.get(e.sourceId)} className={c.exThumb} />
                   <div className={c.exMain}><span className={c.exName} style={{ display: 'block' }}>{e.name}</span><span className={c.meta}>{Math.round(e.endSec - e.startSec)} s{e.tags.length ? ` · ${e.tags.join(', ')}` : ''}</span></div>
                   <Button className={c.small} aria-label={`Ajouter ${e.name}`} onClick={() => setItems((l) => [...l, { exerciseId: e.id, durationSec: Math.max(5, Math.min(planned, DEFAULT_ITEM_SEC)), restAfterSec: 0 }])}>Ajouter</Button>
                 </div>
@@ -99,7 +101,7 @@ function ComposerEditor({ id, existing }: { id: string; existing?: Workout }) {
               <div key={`${it.exerciseId}-${i}`} ref={(el) => { rows.current[i] = el }} className={[c.item, drag === i ? c.itemDrag : ''].join(' ')}>
                 <div className={c.itemTop}>
                   <button type="button" className={c.grip} aria-label={`Glisser pour déplacer ${ex?.name ?? 'cet exercice'}`} onPointerDown={(e) => startDrag(e, i)}><GripVertical size={22} aria-hidden="true" /></button>
-                  <Thumb id={ex?.thumbId} className={c.exThumb} />
+                  <Thumb id={ex?.thumbId} youtubeId={ex ? ytOf.get(ex.sourceId) : undefined} className={c.exThumb} />
                   <div className={c.exMain}><span className={c.exName} style={{ display: 'block' }}>{ex?.name ?? 'Exercice supprimé'}</span>{!ex && <span className={c.meta}>Il sera sauté à la lecture.</span>}</div>
                   <IconButton label="Monter" disabled={i === 0} onClick={() => setItems((l) => move(l, i, i - 1))}><ArrowUp size={20} aria-hidden="true" /></IconButton>
                   <IconButton label="Descendre" disabled={i === items.length - 1} onClick={() => setItems((l) => move(l, i, i + 1))}><ArrowDown size={20} aria-hidden="true" /></IconButton>

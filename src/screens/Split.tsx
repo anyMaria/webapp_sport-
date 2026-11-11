@@ -27,7 +27,7 @@ import s from '../app/app.module.css'
 
 export const TAGS = ['dos', 'épaules', 'hanches', 'nuque', 'jambes', 'poignets']
 const RATES = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 5, 10]
-/** Le lecteur YouTube n'accepte pas plus de 2x. */
+/** Le lecteur YouTube s'arrête à 2x : au-delà, on avance par petits sauts (voir `useYtFastScan`). */
 const YT_MAX_RATE = 2
 type Mode = 'manual' | 'ai' | 'youtube'
 const STEPS = [0.5, 1, 3, 5]
@@ -137,7 +137,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
       .then((p) => {
         if (!alive) { p.destroy(); return }
         ytRef.current = p
-        try { p.setPlaybackRate(rateRef.current) } catch { /* pas prêt */ }
+        try { p.setPlaybackRate(Math.min(rateRef.current, YT_MAX_RATE)) } catch { /* pas prêt */ }
         const d = Math.floor(p.getDuration())
         if (d > 0) {
           setYtDur(d)
@@ -178,7 +178,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
     setRate(r)
     rateRef.current = r
     if (video.current) video.current.playbackRate = r
-    try { ytRef.current?.setPlaybackRate(r) } catch { /* pas prêt */ }
+    try { ytRef.current?.setPlaybackRate(Math.min(r, YT_MAX_RATE)) } catch { /* pas prêt */ }
   }
 
   // Aperçu du segment sélectionné, en boucle, dans la petite fenêtre à côté des réglages.
@@ -207,6 +207,17 @@ function SplitEditor({ source }: { source: VideoSource }) {
     const host = segs.find((x) => t >= x.startSec && t < x.endSec)
     if (host) setSelId(host.id)
   }
+
+  // YouTube au-delà de 2x : le lecteur joue à 2x et on ajoute un petit saut en avant toutes les 500 ms.
+  useEffect(() => {
+    if (!isYT || rate <= YT_MAX_RATE || !playing) return
+    const id = window.setInterval(() => {
+      const p = ytRef.current
+      if (!p) return
+      try { p.seekTo(p.getCurrentTime() + (rate - YT_MAX_RATE) * 0.5, true) } catch { /* pas prêt */ }
+    }, 500)
+    return () => window.clearInterval(id)
+  }, [isYT, rate, playing])
 
   const togglePlay = () => {
     if (isYT) {
@@ -311,7 +322,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
             </Button>
             <Button onClick={() => seekTo(getTime() + step)} aria-label={`Avancer de ${fmt(step)} secondes`}>{fmt(step)} s<FastForward size={20} aria-hidden="true" /></Button>
             <div className={c.speeds} role="group" aria-label="Vitesse de lecture">
-              {RATES.filter((r) => !isYT || r <= YT_MAX_RATE).map((r) => (
+              {RATES.map((r) => (
                 <button key={r} type="button" className={[c.pick, rate === r ? c.pickOn : ''].join(' ')} aria-pressed={rate === r} onClick={() => changeRate(r)}>{fmt(r)}x</button>
               ))}
             </div>
@@ -347,6 +358,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
             </div>
           </div>
 
+          {mode !== 'youtube' && (
           <div className={c.card}>
             <span className={c.label}>Découpe à la main</span>
             <Button variant="primary" className={c.cut} disabled={!duration} onClick={cutHere}>
@@ -400,6 +412,26 @@ function SplitEditor({ source }: { source: VideoSource }) {
               <Button variant="danger" disabled={!duration || segs.length < 2} onClick={() => setConfirmReset(true)}><RotateCcw size={18} aria-hidden="true" />Tout remettre à zéro</Button>
             )}
           </div>
+          )}
+
+          {mode === 'manual' && (
+            <div className={c.card}>
+              <span className={c.label}>Rythme régulier</span>
+              <p className={ui.hint} style={{ margin: 0 }}>Pour une vidéo où chaque exercice dure pareil. Remplace les coupes actuelles.</p>
+              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Effort</span><Stepper label="Durée d'effort" value={effort} min={5} max={120} step={5} unit="s" onChange={setEffort} /></div>
+              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Pause</span><Stepper label="Durée de pause" value={rest} min={0} max={60} step={5} unit="s" onChange={setRest} /></div>
+              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Début du rythme</span><Stepper label="Début du rythme" value={rhythmStart} min={0} max={Math.max(0, Math.floor(duration) - 5)} step={1} unit="s" onChange={setRhythmStart} /></div>
+              <p className={ui.hint} style={{ margin: 0 }}>S'il y a une introduction, place le début après elle.</p>
+              <div className={s.actions}>
+                <Button disabled={!duration} onClick={() => setRhythmStart(Math.min(Math.max(0, Math.floor(getTime())), Math.max(0, Math.floor(duration) - 5)))}>Début = position de lecture ({pos.toFixed(0)} s)</Button>
+                <Button variant="primary" disabled={!duration} onClick={() => {
+                  const r = mergeCandidates(rhythmBoundaries({ effortSec: effort, restSec: rest, startSec: rhythmStart }, duration, []), duration)
+                  setSegs(r); setSelId(r[0]?.id ?? ''); setNotes(['Rythme régulier appliqué.'])
+                }}>Appliquer le rythme régulier</Button>
+              </div>
+              {notes.map((n) => <p key={n} className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
+            </div>
+          )}
 
 
           {sel && (
@@ -421,7 +453,9 @@ function SplitEditor({ source }: { source: VideoSource }) {
           {isYT && mode === 'youtube' && (
             <div className={c.card}>
               <span className={c.label}>Marquage YouTube</span>
-              <p className={ui.hint} style={{ margin: 0 }}>L'analyse automatique n'est pas possible avec le lecteur YouTube : coupe à la main pendant la lecture, par rythme régulier, ou avec les repères de la description.</p>
+              <p className={ui.hint} style={{ margin: 0 }}>Touche « Marquer ici » à chaque changement d'exercice pendant la lecture, ou utilise les repères de la description. L'analyse automatique n'est pas possible avec le lecteur YouTube.</p>
+              <Button variant="primary" className={c.cut} disabled={!duration} onClick={cutHere}><Scissors size={22} aria-hidden="true" />Marquer ici · {pos.toFixed(1)} s</Button>
+              {cutMsg && <p role="alert" className={[s.msg, s.msgErr].join(' ')}>{cutMsg}</p>}
               {chaptersOn && source.youtubeId && (
                 <Button disabled={chaptersBusy} onClick={async () => {
                   setChaptersBusy(true); setNotes([])
@@ -442,15 +476,6 @@ function SplitEditor({ source }: { source: VideoSource }) {
                   if (!r.length) { setNotes(['Aucun repère reconnu. Format attendu : « 2:15 Nom ».']); return }
                   setSegs(r); setSelId(r[0]!.id); setNotes([`${r.length} repères importés.`])
                 }}>Importer les repères</Button>
-              </div>
-              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Effort</span><Stepper label="Durée d'effort" value={effort} min={5} max={120} step={5} unit="s" onChange={setEffort} /></div>
-              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Pause</span><Stepper label="Durée de pause" value={rest} min={0} max={60} step={5} unit="s" onChange={setRest} /></div>
-              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Premier exercice à</span><Stepper label="Début du premier exercice" value={rhythmStart} min={0} max={Math.max(0, duration - 5)} step={5} unit="s" onChange={setRhythmStart} /></div>
-              <div className={s.actions}>
-                <Button disabled={!duration} onClick={() => {
-                  const r = mergeCandidates(rhythmBoundaries({ effortSec: effort, restSec: rest, startSec: rhythmStart }, duration, []), duration)
-                  setSegs(r); setSelId(r[0]?.id ?? ''); setNotes(['Rythme régulier appliqué.'])
-                }}>Appliquer le rythme régulier</Button>
               </div>
               {notes.map((n) => <p key={n} className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
             </div>

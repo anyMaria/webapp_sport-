@@ -146,9 +146,9 @@ export function Home() {
       </section>
 
       <nav className={h.foot} aria-label="Navigation principale">
-        <Link to="/mon-rythme" className={h.navCard}><CalendarCheck size={28} aria-hidden="true" /><span className={h.navTitle}>Mon rythme</span><span className={h.hint}>Ta série, ton créneau fixe</span></Link>
-        <Link to="/collection" className={h.navCard}><Sticker size={28} aria-hidden="true" /><span className={h.navTitle}>Collection</span><span className={h.hint}>Tes stickers et ta pochette</span></Link>
-        <Link to="/reglages" className={h.navCard}><SettingsIcon size={28} aria-hidden="true" /><span className={h.navTitle}>Réglages</span><span className={h.hint}>Son, voix, sauvegarde</span></Link>
+        <Link to="/mon-rythme" className={h.navCard}><CalendarCheck size={24} aria-hidden="true" /><span className={h.navTitle}>Mon rythme</span></Link>
+        <Link to="/collection" className={h.navCard}><Sticker size={24} aria-hidden="true" /><span className={h.navTitle}>Collection</span></Link>
+        <Link to="/reglages" className={h.navCard}><SettingsIcon size={24} aria-hidden="true" /><span className={h.navTitle}>Réglages</span></Link>
       </nav>
     </main>
   )

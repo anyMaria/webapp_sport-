@@ -58,3 +58,6 @@ Décisions prises par Claude Code quand le plan ne tranchait pas. Option la plus
 | 10 | « Séance avec cette vidéo » (bibliothèque, Mes vidéos) ouvre la composition déjà remplie avec la vidéo. | Raccourci du cas courant. |
 | 10 | Bibliothèque : exercices groupés par vidéo (dans l'ordre), filtres ajoutés : durée (moins de 30 s, 30 à 60 s, plus d'une minute) et « sans zone » ; la liste des zones inclut celles déjà utilisées. | Demande de filtres en plus. |
 | 10 | Pastille de l'accueil : « Mon rythme » quand la série est à zéro (au lieu de « Nouvelle série »). | Libellé qui prêtait à confusion. |
+| 9 | Mode « Marquage YouTube » : la carte « Découpe à la main » disparaît et laisse sa place à « Marquage YouTube » (bouton « Marquer ici », repères). Le rythme régulier est une carte du mode Manuelle (début réglable, bouton « Début = position de lecture »). | Demande de l'utilisatrice. |
+| 9 | YouTube au-delà de 2x : le lecteur joue à 2x et l'app ajoute un petit saut en avant toutes les 500 ms. Approximatif et saccadé, utile pour parcourir, pas pour marquer au dixième de seconde. | L'API YouTube s'arrête à 2x. Pas de contournement qui masque le lecteur. |
+| 9 | Accueil : « Mon rythme », « Collection », « Réglages » en cartes basses (icône à côté du texte). Lecture et vitesses centrées sous la vidéo. | Gagner de la hauteur. |

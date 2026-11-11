@@ -39,10 +39,8 @@ const fmt = (ms: number) => {
 
 function ClipLayer({ clip, active, paused, muted, dimmed }: { clip: Clip; active: boolean; paused: boolean; muted: boolean; dimmed: boolean }) {
   const { url, error } = useOpfsUrl(clip.kind === 'file' ? clip.opfsPath : undefined)
-  if (clip.kind === 'youtube') {
-    // Pas de préchargement caché : un lecteur YouTube n'est jamais masqué ni lancé hors de vue.
-    return active ? <LoopYT key={clip.youtubeId + clip.startSec} videoId={clip.youtubeId} startSec={clip.startSec} endSec={clip.endSec} paused={paused} muted={muted} /> : null
-  }
+  // YouTube : lecteur unique affiché par l'écran de séance (voir plus bas), jamais préchargé ni caché.
+  if (clip.kind === 'youtube') return null
   if (clip.kind === 'missing' || error) return active ? <div className={s.placeholder}>Vidéo introuvable. Touche « Suivant » pour la passer.</div> : null
   if (!url) return null
   return <LoopVideo url={url} startSec={clip.startSec} endSec={clip.endSec} active={active} paused={paused} muted={muted} dimmed={dimmed} />
@@ -97,11 +95,15 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
 
   const phase = session?.phase ?? 'ready'
   const running = phase === 'exercise' || phase === 'transition'
+  const [yt, setYt] = useState<{ id: string; playing: boolean }>({ id: '', playing: false })
+  const [skipHoldFor, setSkipHoldFor] = useState<number | null>(null)
+  const [slowFor, setSlowFor] = useState<string | null>(null)
+  const holdRef = useRef(false)
 
-  // Minuteur : un TICK toutes les 100 ms, le temps vient de l'horloge.
+  // Minuteur : un TICK toutes les 100 ms, le temps vient de l'horloge. En attente de la vidéo, le temps de l'exercice ne file pas.
   useEffect(() => {
     if (!running) return
-    const id = window.setInterval(() => send({ type: 'TICK', now: now() }), 100)
+    const id = window.setInterval(() => send({ type: 'TICK', now: now(), hold: holdRef.current }), 100)
     return () => window.clearInterval(id)
   }, [running, send])
 
@@ -145,7 +147,20 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
 
   const askQuit = () => { if (phase === 'exercise' || phase === 'transition') send({ type: 'PAUSE', now: now() }); setConfirmQuit(true) }
 
-  const isYT = clips[cur]?.kind === 'youtube'
+  const curClip = clips[cur]
+  const isYT = curClip?.kind === 'youtube'
+  // Tant que la vidéo YouTube de l'exercice n'est pas en lecture (chargement, saut), le minuteur attend.
+  const ytReady = curClip?.kind === 'youtube' && yt.id === curClip.youtubeId && yt.playing
+  const hold = isYT && phase === 'exercise' && !ytReady && skipHoldFor !== cur
+  useEffect(() => { holdRef.current = hold }, [hold])
+  const holdKey = `${cur}`
+  const slow = hold && slowFor === holdKey
+  // Au bout de 6 s d'attente : proposer de toucher la vidéo, ou de continuer sans elle.
+  useEffect(() => {
+    if (!hold) return
+    const t = window.setTimeout(() => setSlowFor(holdKey), 6000)
+    return () => window.clearTimeout(t)
+  }, [hold, holdKey])
   const thumbUrls = useThumbUrls(plan.thumbIds, plan.thumbYt)
 
   const ring = useMemo(() => {
@@ -190,75 +205,86 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
   const phaseLabel = phase === 'ready' ? 'Prêt' : phase === 'paused' ? 'Pause' : inTransition ? 'Transition' : 'Effort'
   const pillCls = [s.pill, phase === 'exercise' ? s.pillEffort : '', phase === 'transition' ? s.pillTransition : ''].join(' ')
 
+  const cards = (
+    <>
+      {phase === 'ready' && (
+        <div className={[s.card, isYT ? '' : s.center].join(' ')} role="dialog" aria-label="Démarrer la séance">
+          <span className={s.eyebrow}>Séance</span>
+          <h1 className={s.nextTitle} style={{ fontSize: 40 }}>{plan.name}</h1>
+          <span className={s.sub}>{plan.items.length} exercices · {Math.round(plannedSec(session.config) / 60) || 1} min</span>
+          {plan.equipment.length > 0 && <span className={s.sub}>{plan.equipment.length === 1 && plan.equipment[0] === NO_EQUIPMENT ? NO_EQUIPMENT : `Prépare : ${equipmentText(plan.equipment)}`}</span>}
+          {plan.missing > 0 && <p className={s.warn}>{plan.missing} exercice{plan.missing > 1 ? 's' : ''} supprimé{plan.missing > 1 ? 's' : ''} : sauté{plan.missing > 1 ? 's' : ''}.</p>}
+          <button className={[s.big, s.bigPrimary].join(' ')} onClick={() => void start()}><Play size={22} fill="currentColor" aria-hidden="true" />Commencer</button>
+        </div>
+      )}
+
+      {phase === 'paused' && !confirmQuit && (
+        <div className={[s.card, isYT ? '' : s.center].join(' ')} role="status">
+          <span className={s.eyebrow}>En pause</span>
+          <button className={[s.big, s.bigPrimary].join(' ')} onClick={toggle}><Play size={22} fill="currentColor" aria-hidden="true" />Reprendre</button>
+        </div>
+      )}
+
+      {phase === 'transition' && nextItem && (
+        <div className={s.card} role="group" aria-label="Fin d'exercice">
+          <div className={s.cardRow}>
+            <div className={s.ring}>
+              <svg width="108" height="108" viewBox="0 0 108 108" role="img" aria-label={`Compte à rebours, ${Math.ceil(session.remainingMs / 1000)} secondes`}>
+                <circle cx="54" cy="54" r="47" fill="none" stroke="var(--line)" strokeWidth="10" />
+                <circle cx="54" cy="54" r="47" fill="none" stroke="var(--transition)" strokeWidth="10" strokeLinecap="round" strokeDasharray="295" strokeDashoffset={ring} transform="rotate(-90 54 54)" />
+              </svg>
+              <span className={s.ringNum}>{Math.ceil(session.remainingMs / 1000)}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexGrow: 1 }}>
+              <span className={[s.eyebrow, s.eyebrowT].join(' ')}>Suivant dans {Math.ceil(session.remainingMs / 1000)} secondes</span>
+              <span className={s.nextTitle}>{nextItem.name}</span>
+              <span className={s.sub}>{nextItem.durationSec} s{nextItem.cue ? ` · ${nextItem.cue}` : ''}</span>
+            </div>
+            {thumbUrls[cur + 1] && <img className={s.thumb} src={thumbUrls[cur + 1]} alt="" />}
+          </div>
+          <div className={s.btns}>
+            <button className={[s.big, s.cardBtn].join(' ')} onClick={() => send({ type: 'EXTEND', now: now() })}><Repeat2 size={22} aria-hidden="true" />Encore {settings.extendSec} s</button>
+            <button className={[s.big, s.cardBtn, s.bigTransition].join(' ')} onClick={() => send({ type: 'SKIP', now: now() })}>Passer maintenant<SkipForward size={22} fill="currentColor" aria-hidden="true" /></button>
+          </div>
+        </div>
+      )}
+
+      {confirmQuit && (
+        <div className={[s.card, isYT ? '' : s.center].join(' ')} role="alertdialog" aria-label="Quitter la séance">
+          <span className={s.nextTitle}>Quitter la séance ?</span>
+          <div className={s.btns}>
+            <button className={[s.big, s.cardBtn].join(' ')} onClick={() => setConfirmQuit(false)}>Continuer</button>
+            <button className={[s.big, s.cardBtn, s.bigTransition].join(' ')} onClick={() => { setConfirmQuit(false); send({ type: 'QUIT', now: now() }) }}>Quitter</button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+  const hasCard = phase === 'ready' || phase === 'paused' || (phase === 'transition' && !!nextItem) || confirmQuit
+
   return (
     <div className={s.root}>
       <div className={s.stage}>
         <div className={[s.videoBox, isYT ? s.ytBox : ''].join(' ')}>
-          {clips.map((c, i) => (i === cur || i === cur + 1) && (
+          {clips.map((c, i) => c.kind !== 'youtube' && (i === cur || i === cur + 1) && (
             <ClipLayer key={i} clip={c} active={i === cur} paused={paused} muted={!modeHasVideoSound(mode)} dimmed={inTransition && !isYT} />
           ))}
+          {/* Un seul lecteur par vidéo YouTube : d'un exercice à l'autre de la même vidéo, il saute au bon moment sans se recharger. */}
+          {curClip?.kind === 'youtube' && (
+            <LoopYT key={curClip.youtubeId} videoId={curClip.youtubeId} startSec={curClip.startSec} endSec={curClip.endSec} paused={paused} muted={!modeHasVideoSound(mode)} onPlaying={(playing) => setYt({ id: curClip.youtubeId, playing })} />
+          )}
           {phase !== 'ready' && !isYT && <button className={s.tapArea} aria-label={phase === 'paused' ? 'Reprendre' : 'Mettre en pause'} onClick={toggle} />}
         </div>
 
         <button className={[s.fab, s.quit].join(' ')} aria-label="Quitter la séance" onClick={askQuit}><X size={22} aria-hidden="true" /></button>
         {(phase === 'exercise' || phase === 'paused') && (
-          <button className={[s.fab, s.pause].join(' ')} aria-label={phase === 'paused' ? 'Reprendre' : 'Mettre en pause'} onClick={toggle}>
+          <button className={[s.fab, s.pause, isYT ? s.pauseTop : ''].join(' ')} aria-label={phase === 'paused' ? 'Reprendre' : 'Mettre en pause'} onClick={toggle}>
             {phase === 'paused' ? <Play size={28} fill="currentColor" aria-hidden="true" /> : <Pause size={28} fill="currentColor" aria-hidden="true" />}
           </button>
         )}
         {clips[cur]?.kind === 'file' && phase !== 'ready' && <span className={s.origin}>Fichier · extrait {fmt(clips[cur]!.startSec * 1000)} – {fmt(clips[cur]!.endSec * 1000)}</span>}
 
-        {phase === 'ready' && (
-          <div className={[s.card, isYT ? '' : s.center].join(' ')} role="dialog" aria-label="Démarrer la séance">
-            <span className={s.eyebrow}>Séance</span>
-            <h1 className={s.nextTitle} style={{ fontSize: 40 }}>{plan.name}</h1>
-            <span className={s.sub}>{plan.items.length} exercices · {Math.round(plannedSec(session.config) / 60) || 1} min</span>
-            {plan.equipment.length > 0 && <span className={s.sub}>{plan.equipment.length === 1 && plan.equipment[0] === NO_EQUIPMENT ? NO_EQUIPMENT : `Prépare : ${equipmentText(plan.equipment)}`}</span>}
-            {plan.missing > 0 && <p className={s.warn}>{plan.missing} exercice{plan.missing > 1 ? 's' : ''} supprimé{plan.missing > 1 ? 's' : ''} : sauté{plan.missing > 1 ? 's' : ''}.</p>}
-            <button className={[s.big, s.bigPrimary].join(' ')} onClick={() => void start()}><Play size={22} fill="currentColor" aria-hidden="true" />Commencer</button>
-          </div>
-        )}
-
-        {phase === 'paused' && !confirmQuit && (
-          <div className={[s.card, isYT ? '' : s.center].join(' ')} role="status">
-            <span className={s.eyebrow}>En pause</span>
-            <button className={[s.big, s.bigPrimary].join(' ')} onClick={toggle}><Play size={22} fill="currentColor" aria-hidden="true" />Reprendre</button>
-          </div>
-        )}
-
-        {phase === 'transition' && nextItem && (
-          <div className={s.card} role="group" aria-label="Fin d'exercice">
-            <div className={s.cardRow}>
-              <div className={s.ring}>
-                <svg width="108" height="108" viewBox="0 0 108 108" role="img" aria-label={`Compte à rebours, ${Math.ceil(session.remainingMs / 1000)} secondes`}>
-                  <circle cx="54" cy="54" r="47" fill="none" stroke="var(--line)" strokeWidth="10" />
-                  <circle cx="54" cy="54" r="47" fill="none" stroke="var(--transition)" strokeWidth="10" strokeLinecap="round" strokeDasharray="295" strokeDashoffset={ring} transform="rotate(-90 54 54)" />
-                </svg>
-                <span className={s.ringNum}>{Math.ceil(session.remainingMs / 1000)}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexGrow: 1 }}>
-                <span className={[s.eyebrow, s.eyebrowT].join(' ')}>Suivant dans {Math.ceil(session.remainingMs / 1000)} secondes</span>
-                <span className={s.nextTitle}>{nextItem.name}</span>
-                <span className={s.sub}>{nextItem.durationSec} s{nextItem.cue ? ` · ${nextItem.cue}` : ''}</span>
-              </div>
-              {thumbUrls[cur + 1] && <img className={s.thumb} src={thumbUrls[cur + 1]} alt="" />}
-            </div>
-            <div className={s.btns}>
-              <button className={[s.big, s.cardBtn].join(' ')} onClick={() => send({ type: 'EXTEND', now: now() })}><Repeat2 size={22} aria-hidden="true" />Encore {settings.extendSec} s</button>
-              <button className={[s.big, s.cardBtn, s.bigTransition].join(' ')} onClick={() => send({ type: 'SKIP', now: now() })}>Passer maintenant<SkipForward size={22} fill="currentColor" aria-hidden="true" /></button>
-            </div>
-          </div>
-        )}
-
-        {confirmQuit && (
-          <div className={[s.card, isYT ? '' : s.center].join(' ')} role="alertdialog" aria-label="Quitter la séance">
-            <span className={s.nextTitle}>Quitter la séance ?</span>
-            <div className={s.btns}>
-              <button className={[s.big, s.cardBtn].join(' ')} onClick={() => setConfirmQuit(false)}>Continuer</button>
-              <button className={[s.big, s.cardBtn, s.bigTransition].join(' ')} onClick={() => { setConfirmQuit(false); send({ type: 'QUIT', now: now() }) }}>Quitter</button>
-            </div>
-          </div>
-        )}
+        {!isYT && cards}
       </div>
 
       <aside className={s.panel}>
@@ -274,7 +300,9 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
           </div>
         </div>
 
-        <div>
+        {isYT && hasCard && <div className={s.panelCards}>{cards}</div>}
+
+        {!(isYT && hasCard) && <div>
           <h1 className={s.name}>{item?.name}</h1>
           <div className={[s.timer, phase === 'exercise' ? s.timerEffort : '', inTransition || phase === 'ready' ? s.timerMuted : ''].join(' ')} aria-live="off">
             {phase === 'ready' ? fmt((item?.durationSec ?? 0) * 1000) : fmt(session.remainingMs)}
@@ -282,20 +310,27 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
           <span className={s.sub}>
             {inTransition ? 'Terminé. Un bip a signalé la fin.' : `sur ${fmt((item?.durationSec ?? 0) * 1000)}`}
           </span>
-        </div>
+          {hold && (
+            <div className={s.wait} role="status">
+              <span>La vidéo se charge : le minuteur l'attend.</span>
+              {slow && <span className={s.hint}>Si elle ne démarre pas, touche la vidéo pour la lancer.</span>}
+              {slow && <button className={s.mode} onClick={() => setSkipHoldFor(cur)}>Continuer sans la vidéo</button>}
+            </div>
+          )}
+        </div>}
 
         <div className={s.btns}>
           <button className={s.big} style={{ minHeight: 80 }} disabled={phase !== 'exercise'} onClick={() => send({ type: 'EXTEND', now: now() })}><Repeat2 size={22} aria-hidden="true" />Encore</button>
           <button className={[s.big, s.bigPrimary].join(' ')} style={{ minHeight: 80 }} disabled={phase === 'ready' || phase === 'paused'} onClick={() => send({ type: 'SKIP', now: now() })}>Suivant<SkipForward size={22} fill="currentColor" aria-hidden="true" /></button>
         </div>
 
-        <div className={s.next} aria-label="Exercice suivant">
+        {!(isYT && hasCard) && <div className={s.next} aria-label="Exercice suivant">
           {nextItem && thumbUrls[cur + 1] ? <img className={s.nextThumb} src={thumbUrls[cur + 1]} alt="" /> : <div className={s.nextThumb} aria-hidden="true" />}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span className={[s.eyebrow, s.eyebrowT].join(' ')}>Ensuite</span>
             <span className={s.nextName}>{nextItem ? `${nextItem.name} · ${nextItem.durationSec} s` : 'Dernier exercice'}</span>
           </div>
-        </div>
+        </div>}
 
         <div className={s.sound}>
           <span className={s.eyebrow}>Son</span>

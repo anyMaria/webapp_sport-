@@ -123,4 +123,12 @@ describe('moteur de séance', () => {
     const s = createSession(cfg(0))
     expect(reduce(s, { type: 'START', now: 0 }).state.phase).toBe('ready')
   })
+
+  it('attend la vidéo : un TICK en attente ne décompte pas, la suite reprend à partir de là', () => {
+    const a = run(createSession(cfg()), [{ type: 'START', now: 0 }, { type: 'TICK', now: 3000, hold: true }, { type: 'TICK', now: 6000, hold: true }])
+    expect(a.state.remainingMs).toBe(10_000)
+    expect(a.state.activeMs).toBe(0)
+    const b = run(a.state, [{ type: 'TICK', now: 7000 }])
+    expect(b.state.remainingMs).toBe(9000)
+  })
 })

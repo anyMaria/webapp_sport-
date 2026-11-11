@@ -40,7 +40,8 @@ export interface SessionState {
 
 export type SessionEvent =
   | { type: 'START'; now: number }
-  | { type: 'TICK'; now: number }
+  /** `hold` : la vidéo de l'exercice n'est pas encore en lecture (YouTube qui charge) ; le temps de l'exercice attend. */
+  | { type: 'TICK'; now: number; hold?: boolean }
   | { type: 'EXTEND'; now: number }
   | { type: 'SKIP'; now: number }
   | { type: 'PAUSE'; now: number }
@@ -106,6 +107,7 @@ export function reduce(s: SessionState, e: SessionEvent): Step {
 
     case 'TICK': {
       if (s.phase !== 'exercise' && s.phase !== 'transition') return { state: s, effects: [] }
+      if (e.hold && s.phase === 'exercise') return { state: { ...s, lastTickAt: e.now }, effects: [] }
       const dt = Math.max(0, e.now - s.lastTickAt)
       const remainingMs = s.remainingMs - dt
       const activeMs = s.phase === 'exercise' ? s.activeMs + Math.min(dt, Math.max(0, s.remainingMs)) : s.activeMs

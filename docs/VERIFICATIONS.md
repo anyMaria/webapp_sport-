@@ -214,3 +214,8 @@ Attention : la clé de l'IA n'est réglée dans Vercel que pour l'app habituelle
 | 13.22 | Découpage d'une vidéo YouTube longue : « 10 s » en avant et en arrière. | La lecture saute de 10 s. |
 | 13.23 | Étape « Nommer » : tape un nom en anglais, touche « Écouter ». | La voix choisie dit « Next: {nom}, {durée} seconds. » ; avec Spotify en marche, la musique continue. |
 | 13.24 | Étape « Nommer » puis découpage : touche « Son coupé ». | Le son de la vidéo s'entend ; touche à nouveau, il se coupe. Dis-moi si Spotify s'arrête (possible) et s'il reprend quand tu recoupes le son. |
+| 13.25 | Séance avec des exercices d'une vidéo YouTube, « Commencer ». | La vidéo démarre seule ; tant qu'elle charge, le minuteur reste fixe et l'écran l'indique. |
+| 13.26 | Laisse passer un exercice YouTube jusqu'au suivant de la même vidéo. | La vidéo saute au nouvel exercice sans recharger (pas d'écran noir long) ; le minuteur attend la reprise. |
+| 13.27 | Séance YouTube : regarde la mise en page pendant le décompte de fin d'exercice. | La vidéo à gauche n'est jamais recouverte ; le décompte, « Encore » et « Passer maintenant » sont à droite. |
+| 13.28 | Une vidéo YouTube Shorts (verticale), puis une vidéo YouTube classique. | Les deux remplissent la partie gauche au mieux, sans être rognées. |
+| 13.29 | Séance YouTube en mode « Son de la vidéo ». | Dis-moi si le son vient, ou si la vidéo reste muette (Safari peut refuser le son sans toucher la vidéo). |

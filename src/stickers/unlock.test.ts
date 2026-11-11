@@ -84,10 +84,10 @@ describe('pochettes de séance', () => {
     expect(new Set(first.map((u) => u.stickerId)).size).toBe(3)
     expect(evaluateUnlocks(base({ countedSessions: 3, owned: first }))).toEqual([])
   })
-  it('plus rare ensuite : 6 séances = 5 pochettes, 7 = toujours 5, 8 = 6', () => {
-    const five = evaluateUnlocks(base({ countedSessions: 6, rng: seq(0.1, 0.5, 0.9, 0.3, 0.7) }))
-    expect(five).toHaveLength(5)
-    expect(evaluateUnlocks(base({ countedSessions: 7, owned: five }))).toEqual([])
-    expect(evaluateUnlocks(base({ countedSessions: 8, owned: five }))).toHaveLength(1)
+  it('une pochette à chaque séance : 6 séances = 6 pochettes, la 7e en donne une de plus', () => {
+    const six = evaluateUnlocks(base({ countedSessions: 6, rng: seq(0.1, 0.5, 0.9, 0.3, 0.7, 0.2) }))
+    expect(six).toHaveLength(6)
+    expect(evaluateUnlocks(base({ countedSessions: 6, owned: six }))).toEqual([])
+    expect(evaluateUnlocks(base({ countedSessions: 7, owned: six }))).toHaveLength(1)
   })
 })

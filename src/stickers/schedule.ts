@@ -1,13 +1,11 @@
 /**
- * Rythme des pochettes : presque une par séance au début, puis de plus en plus rare.
- * La pochette numéro n demande `sessionsForPouch(n)` séances comptées de plus que la précédente.
+ * Rythme des pochettes : une pochette à chaque séance comptée (choix de l'utilisatrice).
+ * Pour revenir à des pochettes de plus en plus rares, il suffit de changer cette fonction (la pochette numéro n
+ * demande `sessionsForPouch(n)` séances comptées de plus que la précédente).
  */
 export function sessionsForPouch(n: number): number {
-  if (n <= 4) return 1 // pochettes 1 à 4 : à chaque séance
-  if (n <= 8) return 2
-  if (n <= 12) return 3
-  if (n <= 16) return 4
-  return 5
+  void n
+  return 1
 }
 
 /** Nombre total de séances comptées nécessaires pour avoir gagné la pochette n. */

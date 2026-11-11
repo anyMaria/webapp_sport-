@@ -67,3 +67,23 @@ Prépare : trois vidéos TikTok enregistrées sur l'iPad (ou dans Fichiers) et u
 | 3.17 | Ferme complètement l'app, rouvre-la. | Les vidéos, exercices et séances sont toujours là et se lisent. |
 
 Déjà vérifié sur ordinateur : tests automatiques du découpage (couper, fusionner, ajuster, bornes) et des séances (durée, ordre, duplication), parcours complet dans un navigateur (import de deux fichiers, coupe, enregistrement, composition, lancement).
+
+## Phase 4 : pré-marquage automatique
+
+Utilise 3 de tes vraies vidéos : une montée avec des coupures de plan, une rythmée par des bips, une en plan continu sans coupure. Prends le temps de noter, pour chacune, combien de temps tu as mis à corriger le découpage (objectif du plan : moins de 2 minutes par vidéo).
+
+| # | Action | Résultat attendu |
+|---|---|---|
+| 4.1 | Importe une vidéo de plus de 90 s et ouvre « Découper ». | L'analyse démarre toute seule : barre de progression, bouton « Annuler l'analyse ». |
+| 4.2 | Pendant l'analyse, touche l'écran, fais défiler la page. | L'interface reste fluide, rien ne se fige. |
+| 4.3 | Annule une analyse en cours. | Elle s'arrête, tu gardes l'écran de découpage tel quel. |
+| 4.4 | Laisse finir l'analyse sur une vidéo de 15 minutes. | Fin en moins de 90 s environ, sans rechargement de la page. Note le temps. |
+| 4.5 | Lis les messages sous les interrupteurs. | Ils disent combien de frontières chaque détecteur a trouvées. **Si l'audio échoue**, le message dit « Bips et silences indisponibles… » avec la raison : recopie-moi cette raison. L'analyse doit continuer avec les changements de plan. |
+| 4.6 | Regarde le découpage proposé sur la vidéo montée. | Les coupures de plan sont là. Une courte pause entre exercices est proposée « Retiré ». Une intro parlée est retirée, sinon gardée avec « Fin à vérifier ». |
+| 4.7 | Vidéo rythmée par des bips : active seulement « Bips et silences ». | Les frontières tombent près des bips ou des silences. |
+| 4.8 | Plan continu sans coupure : lance l'analyse. | Peu de frontières, c'est normal. Utilise « Rythme régulier » : effort, pause, début du premier exercice. Les segments sont créés et calés sur les frontières détectées proches. |
+| 4.9 | Les segments marqués « Fin à vérifier ». | Ils sont bien ceux où la frontière est douteuse. Corrige-les avec − et + ; l'étiquette disparaît après ajustement de la fin. |
+| 4.10 | « Tout remettre à zéro » puis « Analyser » avec d'autres interrupteurs. | Le découpage est recalculé. |
+| 4.11 | Combien de segments faux ou manquants en moyenne ? | Note-le : ça servira à régler les seuils. |
+
+Déjà vérifié sur ordinateur : 18 tests automatiques sur des signaux synthétiques (silence de 1 s, silence trop court, bip de 300 ms, son trop long, hors bande, rythme, regroupement, rattachement, « Pause », intro retirée). Vidéo de test de 2 min : analyse en 6 s, 5 segments corrects. Le décodage audio de gros fichiers sur iPad n'est pas vérifié : c'est ce que le test 7 a fait échouer.

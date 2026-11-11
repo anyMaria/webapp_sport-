@@ -10,6 +10,10 @@ import {
   adjust, clampCue, CUE_MAX, durationOf, formatTime, keptSegments, mergeWithNext, splitAt, STEP_SEC, wholeVideo, type Segment,
 } from '../import/segments'
 import { Screen } from '../app/Screen'
+import { Switch } from '../ui/Switch'
+import { Stepper } from '../ui/Stepper'
+import { analyzeVideo } from '../import/detect/analyze'
+import { getVideoFile } from '../data/opfs'
 import { Button, IconButton } from '../ui/Button'
 import ui from '../ui/ui.module.css'
 import c from '../import/import.module.css'
@@ -33,6 +37,51 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [pos, setPos] = useState(0)
   const [saving, setSaving] = useState(false)
   const video = useRef<HTMLVideoElement>(null)
+  const [useShots, setUseShots] = useState(true)
+  const [useAudio, setUseAudio] = useState(true)
+  const [useRhythm, setUseRhythm] = useState(false)
+  const [effort, setEffort] = useState(30)
+  const [rest, setRest] = useState(10)
+  const [rhythmStart, setRhythmStart] = useState(0)
+  const [progress, setProgress] = useState<{ label: string; ratio: number | null } | null>(null)
+  const [notes, setNotes] = useState<string[]>([])
+  const abort = useRef<AbortController | null>(null)
+  const autoRan = useRef(false)
+
+  const analyze = async () => {
+    if (!source.opfsPath) return
+    const ctl = new AbortController()
+    abort.current = ctl
+    setNotes([])
+    setProgress({ label: 'Préparation', ratio: null })
+    try {
+      const file = await getVideoFile(source.opfsPath)
+      const r = await analyzeVideo(file, source.durationSec, { shots: useShots, audio: useAudio, rhythm: useRhythm ? { effortSec: effort, restSec: rest, startSec: rhythmStart } : null }, (label, ratio) => setProgress({ label, ratio }), ctl.signal)
+      setSegs(r.segments)
+      setSelId(r.segments[0]?.id ?? '')
+      setNotes(r.notes)
+    } catch (e) {
+      // Annulation : on garde les segments actuels. Autre échec : un seul segment à couper à la main.
+      if ((e as Error).name !== 'AbortError') {
+        const w = wholeVideo(source.durationSec)
+        setSegs(w)
+        setSelId(w[0]!.id)
+        setNotes([`L'analyse a échoué (${(e as Error).message}). Coupe la vidéo à la main.`])
+      }
+    } finally {
+      setProgress(null)
+      abort.current = null
+    }
+  }
+
+  // Fichier de plus de 90 s : l'analyse démarre toute seule à l'ouverture.
+  useEffect(() => {
+    if (autoRan.current || source.durationSec < 90) return
+    autoRan.current = true
+    void analyze()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => () => abort.current?.abort(), [])
 
   const sel = segs.find((x) => x.id === selId)
   const selIndex = segs.findIndex((x) => x.id === selId)
@@ -90,6 +139,36 @@ function SplitEditor({ source }: { source: VideoSource }) {
           <div className={c.preview}>
             {url && <video ref={video} src={url} muted playsInline aria-label="Aperçu du segment sélectionné" />}
             {sel && <span className={c.time}>{formatTime(sel.startSec)} – {formatTime(sel.endSec)}</span>}
+          </div>
+
+          <div className={c.card}>
+            <span className={c.label}>Pré-marquage automatique</span>
+            <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Changements de plan</span><Switch on={useShots} onChange={setUseShots} label="Changements de plan" /></div>
+            <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Bips et silences</span><Switch on={useAudio} onChange={setUseAudio} label="Bips et silences" /></div>
+            <div className={s.actions} style={{ justifyContent: 'space-between' }}>
+              <span>Rythme régulier<br /><span className={ui.hint}>{effort} s d'effort, {rest} s de pause</span></span>
+              <Switch on={useRhythm} onChange={setUseRhythm} label="Rythme régulier" />
+            </div>
+            {useRhythm && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Effort</span><Stepper label="Durée d'effort" value={effort} min={5} max={120} step={5} unit="s" onChange={setEffort} /></div>
+                <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Pause</span><Stepper label="Durée de pause" value={rest} min={0} max={60} step={5} unit="s" onChange={setRest} /></div>
+                <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Premier exercice à</span><Stepper label="Début du premier exercice" value={rhythmStart} min={0} max={Math.max(0, Math.floor(source.durationSec) - 5)} step={5} unit="s" onChange={setRhythmStart} /></div>
+              </div>
+            )}
+            {progress ? (
+              <div role="status" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <span className={s.msg}>{progress.label}…</span>
+                <progress max={1} {...(progress.ratio === null ? {} : { value: progress.ratio })} style={{ width: '100%', height: 12 }} aria-label="Analyse en cours" />
+                <Button onClick={() => abort.current?.abort()}>Annuler l'analyse</Button>
+              </div>
+            ) : (
+              <div className={s.actions}>
+                <Button onClick={() => void analyze()} disabled={!useShots && !useAudio && !useRhythm}>Analyser</Button>
+                <Button onClick={() => { const w = wholeVideo(source.durationSec); setSegs(w); setSelId(w[0]!.id); setNotes([]) }}>Tout remettre à zéro</Button>
+              </div>
+            )}
+            {notes.map((n) => <p key={n} className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
           </div>
 
           {sel && (

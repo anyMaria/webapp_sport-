@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type {
+  Activity,
   Exercise,
   JokerUse,
   SessionLog,
@@ -22,6 +23,7 @@ export class AppDB extends Dexie {
   jokerUses!: EntityTable<JokerUse, 'monthKey'>
   settings!: EntityTable<SettingsRow, 'id'>
   thumbs!: EntityTable<Thumb, 'id'>
+  activities!: EntityTable<Activity, 'id'>
 
   constructor(name = 'webapp-sport') {
     super(name)
@@ -35,6 +37,7 @@ export class AppDB extends Dexie {
       settings: 'id',
       thumbs: 'id',
     })
+    this.version(2).stores({ activities: 'id, date' })
   }
 }
 

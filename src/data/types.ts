@@ -98,3 +98,12 @@ export interface Thumb {
 
 /** Texte affiché pour l'origine d'une vidéo : la précision saisie si elle existe. */
 export const originText = (s: Pick<VideoSource, 'originLabel' | 'originNote'>) => (s.originLabel === 'Autre' && s.originNote ? s.originNote : s.originLabel)
+
+/** Sport fait ailleurs (club, course, cours du samedi…), noté à la main. Ne compte pas pour la série. */
+export interface Activity {
+  id: string
+  date: string // jour local, AAAA-MM-JJ
+  label: string
+  durationMin?: number
+  createdAt: string
+}

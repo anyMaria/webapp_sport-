@@ -9,6 +9,8 @@ export interface MonthCell {
   today: boolean
   /** Jour de créneau prévu. */
   slot: boolean
+  /** Sport fait ailleurs noté ce jour-là. */
+  external: boolean
 }
 
 export const addMonths = (year: number, month: number, delta: number) => {
@@ -17,7 +19,7 @@ export const addMonths = (year: number, month: number, delta: number) => {
 }
 
 /** Grille du mois, du lundi au dimanche, complétée jusqu'à des semaines entières. `month` va de 0 à 11. */
-export function monthGrid(year: number, month: number, doneKeys: Set<string>, slotDays: number[], today: Date): MonthCell[] {
+export function monthGrid(year: number, month: number, doneKeys: Set<string>, slotDays: number[], today: Date, externalKeys: Set<string> = new Set()): MonthCell[] {
   const first = new Date(year, month, 1)
   const lead = (first.getDay() + 6) % 7
   const count = new Date(year, month + 1, 0).getDate()
@@ -25,9 +27,9 @@ export function monthGrid(year: number, month: number, doneKeys: Set<string>, sl
   const todayKey = dayKey(today)
   return Array.from({ length: total }, (_, i) => {
     const day = i - lead + 1
-    if (day < 1 || day > count) return { day: 0, key: `pad-${i}`, inMonth: false, done: false, today: false, slot: false }
+    if (day < 1 || day > count) return { day: 0, key: `pad-${i}`, inMonth: false, done: false, today: false, slot: false, external: false }
     const d = new Date(year, month, day)
     const key = dayKey(d)
-    return { day, key, inMonth: true, done: doneKeys.has(key), today: key === todayKey, slot: slotDays.includes(d.getDay()) }
+    return { day, key, inMonth: true, done: doneKeys.has(key), today: key === todayKey, slot: slotDays.includes(d.getDay()), external: externalKeys.has(key) }
   })
 }

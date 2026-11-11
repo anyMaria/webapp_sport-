@@ -20,6 +20,8 @@ export interface BackupFile {
   stickerUnlocks: unknown[]
   jokerUses: unknown[]
   settings: unknown[]
+  /** Sport noté à la main (absent des anciennes sauvegardes). */
+  activities?: unknown[]
   thumbs: ThumbDump[]
 }
 
@@ -54,6 +56,7 @@ export async function exportBackup(db: AppDB): Promise<BackupFile> {
     stickerUnlocks: await db.stickerUnlocks.toArray(),
     jokerUses: await db.jokerUses.toArray(),
     settings: await db.settings.toArray(),
+    activities: await db.activities.toArray(),
     thumbs,
   }
 }
@@ -80,7 +83,10 @@ export function parseBackup(text: string): BackupFile {
 
 /** Remplace toutes les données par celles de la sauvegarde, en une seule transaction. */
 export async function restoreBackup(db: AppDB, backup: BackupFile): Promise<void> {
-  await db.transaction('rw', [...TABLES.map((t) => db[t]), db.thumbs], async () => {
+  await db.transaction('rw', [...TABLES.map((t) => db[t]), db.thumbs, db.activities], async () => {
+    await db.activities.clear()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (db.activities as any).bulkPut(backup.activities ?? [])
     for (const t of TABLES) {
       await db[t].clear()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Dumbbell } from 'lucide-react'
 import { db, saveSettings } from '../data/db'
 import { Screen } from '../app/Screen'
 import { SpaceNav } from './SpaceNav'
@@ -13,6 +13,7 @@ import { streakMessage, useMotivation } from '../motivation/useMotivation'
 import { APP_NAME } from '../lib/constants'
 import { dayKey } from '../motivation/weeks'
 import { addMonths, monthGrid } from '../motivation/month'
+import { addActivity, removeActivity, sportChoices } from '../library/activities'
 import ui from '../ui/ui.module.css'
 import r from './rhythm.module.css'
 import s from '../app/app.module.css'
@@ -43,9 +44,23 @@ export function Rhythm() {
   // Ce mois-ci : les jours avec une séance comptée, et la navigation d'un mois à l'autre.
   const today = new Date()
   const [shown, setShown] = useState({ year: today.getFullYear(), month: today.getMonth() })
+  const activities = useLiveQuery(() => db.activities.toArray(), []) ?? []
+  const [picked, setPicked] = useState<string | null>(null) // jour choisi dans le calendrier (AAAA-MM-JJ)
+  const [sport, setSport] = useState('')
+  const [minutes, setMinutes] = useState(60)
+  const externalKeys = new Set(activities.map((a) => a.date))
   const doneKeys = new Set(logs.filter((l) => l.counted).map((l) => dayKey(new Date(l.startedAt))))
-  const grid = monthGrid(shown.year, shown.month, doneKeys, slot.days, today)
+  const grid = monthGrid(shown.year, shown.month, doneKeys, slot.days, today, externalKeys)
   const doneCount = grid.filter((c) => c.done).length
+  const externalCount = activities.filter((a) => a.date.startsWith(`${shown.year}-${String(shown.month + 1).padStart(2, '0')}`)).length
+  const dayActivities = picked ? activities.filter((a) => a.date === picked) : []
+  const pickedLabel = picked ? new Date(`${picked}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''
+  const choices = sportChoices(activities)
+  const save = async () => {
+    if (!picked || !sport.trim()) return
+    await addActivity(picked, sport, minutes)
+    setSport('')
+  }
   const isCurrent = shown.year === today.getFullYear() && shown.month === today.getMonth()
   const monthName = new Date(shown.year, shown.month, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
 
@@ -63,17 +78,51 @@ export function Rhythm() {
           <div className={r.grid} role="grid" aria-label={`Séances de ${monthName}`}>
             {WEEK_LABELS.map((l, i) => <span key={`h${i}`} className={r.gridHead} aria-hidden="true">{l}</span>)}
             {grid.map((c) => (
-              <span
-                key={c.key}
-                role="gridcell"
-                aria-label={c.inMonth ? `${c.day}${c.done ? ' : séance faite' : c.slot ? ' : créneau prévu' : ''}` : undefined}
-                className={[r.cell, !c.inMonth ? r.cellPad : '', c.done ? r.cellDone : '', c.today ? r.cellToday : '', c.slot && !c.done ? r.cellSlot : ''].join(' ')}
-              >
-                {c.done ? <Check size={16} strokeWidth={3} aria-hidden="true" /> : c.day || ''}
-              </span>
+              c.inMonth ? (
+                <button
+                  key={c.key}
+                  type="button"
+                  role="gridcell"
+                  aria-pressed={picked === c.key}
+                  aria-label={`${c.day}${c.done ? ' : séance faite ici' : ''}${c.external ? ' : sport fait ailleurs' : ''}${!c.done && !c.external && c.slot ? ' : créneau prévu' : ''}. Noter du sport`}
+                  onClick={() => setPicked(picked === c.key ? null : c.key)}
+                  className={[r.cell, r.cellBtn, c.done ? r.cellDone : '', c.external && !c.done ? r.cellExt : '', c.today ? r.cellToday : '', c.slot && !c.done && !c.external ? r.cellSlot : '', picked === c.key ? r.cellPicked : ''].join(' ')}
+                >
+                  {c.done ? <Check size={16} strokeWidth={3} aria-hidden="true" /> : c.external ? <Dumbbell size={16} aria-hidden="true" /> : c.day}
+                  {c.done && c.external && <span className={r.extDot} aria-hidden="true" />}
+                </button>
+              ) : <span key={c.key} className={[r.cell, r.cellPad].join(' ')} />
             ))}
           </div>
-          <span className={ui.hint}>{doneCount === 0 ? 'Aucune séance ce mois-là.' : `${doneCount} séance${doneCount > 1 ? 's' : ''} ce mois-là.`} Trait pointillé : jour de créneau.</span>
+          <span className={ui.hint}>{doneCount} séance{doneCount > 1 ? 's' : ''} ici · {externalCount} sport{externalCount > 1 ? 's' : ''} ailleurs.</span>
+          <div className={r.legend}>
+            <span><span className={r.swatch} style={{ background: 'var(--effort)' }} />Séance ici</span>
+            <span><span className={r.swatch} style={{ background: 'var(--transition)' }} />Sport ailleurs</span>
+            <span><span className={r.swatch} style={{ border: '2px dashed var(--effort)' }} />Créneau prévu</span>
+          </div>
+          <Button onClick={() => setPicked(dayKey(today))}><Dumbbell size={18} aria-hidden="true" />Noter un sport fait ailleurs</Button>
+          {picked && (
+            <div className={r.note} role="group" aria-label={`Sport du ${pickedLabel}`} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <strong style={{ textTransform: 'capitalize' }}>{pickedLabel}</strong>
+              {dayActivities.map((a) => (
+                <div key={a.id} className={s.actions} style={{ justifyContent: 'space-between' }}>
+                  <span>{a.label}{a.durationMin ? ` · ${a.durationMin} min` : ''}</span>
+                  <Button variant="danger" aria-label={`Supprimer ${a.label}`} onClick={() => void removeActivity(a.id)}>Supprimer</Button>
+                </div>
+              ))}
+              <span className={ui.hint}>Quel sport as-tu fait ?</span>
+              <div className={r.chips} role="group" aria-label="Sports">
+                {choices.map((c) => <button key={c} type="button" aria-pressed={sport === c} className={[r.chip, sport === c ? r.chipOn : ''].join(' ')} onClick={() => setSport(c)}>{c}</button>)}
+              </div>
+              <input className={ui.select} style={{ maxWidth: '100%' }} aria-label="Autre sport" placeholder="Autre sport" value={sport} maxLength={40} onChange={(e) => setSport(e.target.value)} />
+              <Row label="Durée"><Stepper label="Durée du sport" value={minutes} min={5} max={240} step={5} unit="min" onChange={setMinutes} /></Row>
+              <div className={s.actions}>
+                <Button variant="primary" disabled={!sport.trim()} onClick={() => void save()}>Ajouter ce sport</Button>
+                <Button onClick={() => setPicked(null)}>Fermer</Button>
+              </div>
+              <span className={ui.hint}>Ces sports s'affichent dans le calendrier mais ne comptent pas pour ta série.</span>
+            </div>
+          )}
           <div className={r.streakRow}>
             <span className={r.streak}>{result.streak}</span>
             <span className={r.streakText}>semaine{result.streak > 1 ? 's' : ''} d'affilée<br /><span className={ui.hint}>Objectif : {settings.weeklyGoal} séances par semaine</span></span>

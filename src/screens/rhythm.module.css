@@ -25,3 +25,12 @@
 .cellDone { background: var(--effort); border-color: var(--effort); color: var(--on-accent); }
 .cellToday { border: 3px solid var(--transition); }
 .cellSlot { border-style: dashed; border-color: var(--effort); }
+.cellBtn { background: transparent; color: var(--text); cursor: pointer; padding: 0; position: relative; }
+.cellExt { background: var(--transition); border-color: var(--transition); color: var(--on-accent); }
+.cellPicked { outline: 3px solid var(--text); outline-offset: 2px; }
+.extDot { position: absolute; right: 4px; bottom: 4px; width: 10px; height: 10px; border-radius: 5px; background: var(--transition); border: 2px solid var(--bg-deep); }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--text-muted); }
+.swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 6px; vertical-align: -2px; box-sizing: border-box; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 44px; padding: 0 16px; border-radius: var(--radius-s); border: 2px solid var(--border); background: transparent; color: var(--text); font-weight: 600; font-size: 14px; cursor: pointer; }
+.chipOn { background: var(--text); border-color: var(--text); color: var(--on-accent); }

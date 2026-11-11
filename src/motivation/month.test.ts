@@ -11,6 +11,11 @@ describe('mois', () => {
     expect(g.find((c) => c.day === 11)!.today).toBe(true)
     expect(g.find((c) => c.day === 2)!.slot).toBe(true) // lundi
     expect(g.filter((c) => c.inMonth)).toHaveLength(30)
+    expect(g.find((c) => c.day === 14)!.external).toBe(false)
+  })
+  it('marque le sport fait ailleurs', () => {
+    const g = monthGrid(2026, 10, new Set(), [], new Date(2026, 10, 11), new Set(['2026-11-14']))
+    expect(g.find((c) => c.day === 14)!.external).toBe(true)
   })
   it('passe d\'une année à l\'autre', () => {
     expect(addMonths(2026, 11, 1)).toEqual({ year: 2027, month: 0 })

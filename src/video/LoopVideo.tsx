@@ -17,6 +17,9 @@ export function LoopVideo({ url, startSec, endSec, active, paused, muted, dimmed
   const ref = useRef<HTMLVideoElement>(null)
   const end = Math.max(endSec, startSec + 1)
 
+  // La propriété `muted` d'une vidéo ne suit pas toujours l'attribut après le premier affichage : on la règle à la main.
+  useEffect(() => { if (ref.current) ref.current.muted = muted }, [muted])
+
   useEffect(() => {
     const v = ref.current
     if (!v) return

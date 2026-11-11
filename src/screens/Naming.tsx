@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronLeft, ChevronRight, Pause, Play, Sparkles, Volume2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pause, Play, Sparkles, Volume2, VolumeX } from 'lucide-react'
 import { db, loadSettings } from '../data/db'
 import type { VideoSource } from '../data/types'
 import { useOpfsUrl } from '../video/useOpfsUrl'
@@ -66,6 +66,8 @@ function NamingEditor({ source, initial, saved }: { source: VideoSource; initial
   const [showRemoved, setShowRemoved] = useState(readShowRemoved)
   const [selId, setSelId] = useState(() => (initial.find((x) => x.kept && isDefaultName(x.name)) ?? initial.find((x) => x.kept) ?? initial[0])!.id)
   const [paused, setPaused] = useState(false)
+  /** Son de la vidéo : coupé par défaut (pour ne pas couper la musique), à activer pour entendre la coach. */
+  const [soundOn, setSoundOn] = useState(false)
   const [saving, setSaving] = useState(false)
   const [equipment, setEquipment] = useState<string[]>(source.equipment ?? [])
   const knownEquipment = customEquipment(useLiveQuery(() => db.sources.toArray(), [])?.map((x) => x.equipment) ?? [])
@@ -205,12 +207,15 @@ function NamingEditor({ source, initial, saved }: { source: VideoSource; initial
       <div className={n.cols}>
         <section className={n.left} aria-label="Exercice sélectionné">
           <div className={n.player}>
-            {isYT && source.youtubeId && <LoopYT videoId={source.youtubeId} startSec={sel.startSec} endSec={sel.endSec} paused={paused} muted />}
-            {!isYT && url && <LoopVideo url={url} startSec={sel.startSec} endSec={sel.endSec} active paused={paused} muted />}
+            {isYT && source.youtubeId && <LoopYT videoId={source.youtubeId} startSec={sel.startSec} endSec={sel.endSec} paused={paused} muted={!soundOn} />}
+            {!isYT && url && <LoopVideo url={url} startSec={sel.startSec} endSec={sel.endSec} active paused={paused} muted={!soundOn} />}
           </div>
           <div className={n.playRow}>
             <span className={n.which}>{sel.kept ? `Exercice ${keptNo + 1} sur ${kept.length}` : 'Partie retirée'} · {formatTime(sel.startSec)} – {formatTime(sel.endSec)} · {Math.round(durationOf(sel))} s</span>
-            <Button onClick={() => setPaused(!paused)} aria-label={paused ? 'Lecture' : 'Pause'}>{paused ? <Play size={20} aria-hidden="true" /> : <Pause size={20} aria-hidden="true" />}{paused ? 'Lecture' : 'Pause'}</Button>
+            <div className={n.playBtns}>
+              <Button onClick={() => setPaused(!paused)} aria-label={paused ? 'Lecture' : 'Pause'}>{paused ? <Play size={20} aria-hidden="true" /> : <Pause size={20} aria-hidden="true" />}{paused ? 'Lecture' : 'Pause'}</Button>
+              <Button aria-pressed={soundOn} onClick={() => setSoundOn(!soundOn)} aria-label={soundOn ? 'Couper le son de la vidéo' : 'Activer le son de la vidéo'}>{soundOn ? <Volume2 size={20} aria-hidden="true" /> : <VolumeX size={20} aria-hidden="true" />}{soundOn ? 'Son activé' : 'Son coupé'}</Button>
+            </div>
           </div>
 
           {sel.kept ? (

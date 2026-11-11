@@ -213,3 +213,4 @@ Attention : la clé de l'IA n'est réglée dans Vercel que pour l'app habituelle
 | 13.21 | Mes vidéos, une vidéo déjà découpée : « Noms et équipement », change un nom, « Terminé ». | Le nouveau nom est dans la bibliothèque et dans les séances. |
 | 13.22 | Découpage d'une vidéo YouTube longue : « 10 s » en avant et en arrière. | La lecture saute de 10 s. |
 | 13.23 | Étape « Nommer » : tape un nom en anglais, touche « Écouter ». | La voix choisie dit « Next: {nom}, {durée} seconds. » ; avec Spotify en marche, la musique continue. |
+| 13.24 | Étape « Nommer » puis découpage : touche « Son coupé ». | Le son de la vidéo s'entend ; touche à nouveau, il se coupe. Dis-moi si Spotify s'arrête (possible) et s'il reprend quand tu recoupes le son. |

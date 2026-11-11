@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check, ChevronDown, ChevronLeft, ChevronRight, FastForward, ListOrdered, Merge, Pause, Play, Rewind, RotateCcw, Scissors, Sparkles, Timer, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Volume2, VolumeX, FastForward, ListOrdered, Merge, Pause, Play, Rewind, RotateCcw, Scissors, Sparkles, Timer, Trash2 } from 'lucide-react'
 import { db, loadSettings } from '../data/db'
 import type { VideoSource } from '../data/types'
 import { useOpfsUrl } from '../video/useOpfsUrl'
@@ -83,6 +83,14 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [rate, setRate] = useState(1)
   const rateRef = useRef(1)
   const [playing, setPlaying] = useState(false)
+  /** Son de la vidéo : coupé par défaut, à activer pour entendre la coach. */
+  const [soundOn, setSoundOn] = useState(false)
+  const toggleSound = () => {
+    const on = !soundOn
+    setSoundOn(on)
+    if (video.current) video.current.muted = !on
+    try { if (on) ytRef.current?.unMute(); else ytRef.current?.mute() } catch { /* pas prêt */ }
+  }
   const [step, setStep] = useState(1)
   const [cutMsg, setCutMsg] = useState<string | null>(null)
   const [help, setHelp] = useState<Help>(null)
@@ -397,7 +405,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
               <video
                 ref={video}
                 src={url}
-                muted
+                muted={!soundOn}
                 playsInline
                 aria-label="Vidéo à découper"
                 onLoadedData={(e) => { e.currentTarget.playbackRate = rateRef.current; void e.currentTarget.play().catch(() => undefined) }}
@@ -417,6 +425,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
             </Button>
             <Button onClick={() => seekTo(getTime() + step)} aria-label={`Avancer de ${fmt(step)} secondes`}>{fmt(step)} s<FastForward size={20} aria-hidden="true" /></Button>
             <Button onClick={() => seekTo(getTime() + 10)} aria-label="Avancer de 10 secondes">10 s<FastForward size={20} aria-hidden="true" /></Button>
+            <IconButton label={soundOn ? 'Couper le son de la vidéo' : 'Activer le son de la vidéo'} aria-pressed={soundOn} onClick={toggleSound}>{soundOn ? <Volume2 size={22} aria-hidden="true" /> : <VolumeX size={22} aria-hidden="true" />}</IconButton>
             <div className={c.speeds} role="group" aria-label="Vitesse de lecture">
               {RATES.map((r) => (
                 <button key={r} type="button" className={[c.pick, rate === r ? c.pickOn : ''].join(' ')} aria-pressed={rate === r} onClick={() => changeRate(r)}>{fmt(r)}x</button>

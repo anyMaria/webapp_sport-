@@ -8,6 +8,7 @@
 .right { display: flex; flex-direction: column; gap: 12px; }
 .player { position: relative; height: clamp(180px, 30vh, 360px); border-radius: var(--radius-s); background: var(--bg-deep); overflow: hidden; }
 .playRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.playBtns { display: flex; gap: 8px; }
 .which { font-size: 15px; font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--text-muted); }
 .field input { min-height: var(--touch); border-radius: var(--radius-s); border: 2px solid var(--border); background: var(--bg-deep); padding: 0 12px; color: var(--text); width: 100%; }

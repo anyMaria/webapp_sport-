@@ -19,6 +19,7 @@ export function T7Analysis() {
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const cancel = useRef(false)
+  const preview = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     try {
@@ -49,6 +50,7 @@ export function T7Analysis() {
         v.currentTime = i * step
         await nextEvent(v, 'seeked')
         g.drawImage(v, 0, 0, 64, 36)
+        preview.current?.getContext('2d')?.drawImage(v, 0, 0, 256, 144)
         const px = g.getImageData(0, 0, 64, 36).data
         const hist = new Array<number>(16).fill(0)
         for (let p = 0; p < px.length; p += 4) {
@@ -126,6 +128,7 @@ export function T7Analysis() {
         <Btn onClick={() => { cancel.current = true }} disabled={!busy}>Annuler</Btn>
         <Btn onClick={clear}>Effacer</Btn>
       </div>
+      <canvas ref={preview} width={256} height={144} className={s.video} style={{ width: 256, height: 144 }} aria-label="Aperçu de l'image analysée" />
       <Log lines={lines} />
     </TestCard>
   )

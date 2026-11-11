@@ -8,3 +8,4 @@ Décisions prises par Claude Code quand le plan ne tranchait pas. Option la plus
 | 0 | Le projet de phase 0 contient déjà l'outillage PWA (manifeste, service worker, icônes provisoires). | Les tests 4 et 5 doivent tourner dans l'app installée sur l'écran d'accueil. |
 | 0 | Les verdicts des sept tests se saisissent sur la page `/lab` (boutons + remarque), puis un rapport texte se copie. | L'iPad n'a pas de console ; le rapport se colle ensuite dans `docs/phase0.md`. |
 | 0 | Icônes de l'app : disque menthe/abricot provisoire. | L'utilisatrice est graphiste et les remplacera. |
+| 0 | Proposition : abandonner le détecteur « bips et silences » (plan B du test 7), garder changements de plan + rythme régulier. | Le décodage audio d'une vidéo de 15 min a échoué sur l'iPad. En attente de l'accord de l'utilisatrice. |

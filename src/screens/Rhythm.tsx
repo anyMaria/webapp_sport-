@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Check } from 'lucide-react'
 import { db, saveSettings } from '../data/db'
 import { Screen } from '../app/Screen'
+import { SpaceNav } from './SpaceNav'
 import { Button } from '../ui/Button'
 import { Switch } from '../ui/Switch'
 import { Stepper } from '../ui/Stepper'
@@ -48,6 +49,7 @@ export function Rhythm() {
 
   return (
     <Screen title="Mon rythme" subtitle="La série compte les semaines, pas les jours : un jour sans séance ne casse rien.">
+      <SpaceNav />
       <div className={s.grid}>
         <section className={r.card} aria-label="Série en cours">
           <span className={r.label}>Série en cours</span>

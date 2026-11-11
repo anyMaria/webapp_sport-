@@ -29,7 +29,7 @@ export const TAGS = ['dos', 'épaules', 'hanches', 'nuque', 'jambes', 'poignets'
 const RATES = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 5, 10]
 /** Le lecteur YouTube s'arrête à 2x : au-delà, on avance par petits sauts (voir `useYtFastScan`). */
 const YT_MAX_RATE = 2
-type Mode = 'manual' | 'ai' | 'youtube'
+type Mode = 'manual' | 'rhythm' | 'ai' | 'youtube'
 const STEPS = [0.5, 1, 3, 5]
 const fmt = (n: number) => String(n).replace('.', ',')
 
@@ -352,15 +352,16 @@ function SplitEditor({ source }: { source: VideoSource }) {
           <div className={c.card}>
             <span className={c.label}>Mode de découpe</span>
             <div className={c.pickRow} role="group" aria-label="Mode de découpe">
-              <button type="button" className={[c.pick, mode === 'manual' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'manual'} onClick={() => setMode('manual')}>Manuelle</button>
+              <button type="button" className={[c.pick, mode === 'manual' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'manual'} onClick={() => setMode('manual')}>Coupes manuelles</button>
+              <button type="button" className={[c.pick, mode === 'rhythm' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'rhythm'} onClick={() => setMode('rhythm')}>Rythme régulier</button>
               {!isYT && <button type="button" className={[c.pick, mode === 'ai' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'ai'} onClick={() => setMode('ai')}>Découpe IA</button>}
               {isYT && <button type="button" className={[c.pick, mode === 'youtube' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'youtube'} onClick={() => setMode('youtube')}>Marquage YouTube</button>}
             </div>
           </div>
 
-          {mode !== 'youtube' && (
+          {mode === 'manual' && (
           <div className={c.card}>
-            <span className={c.label}>Découpe à la main</span>
+            <span className={c.label}>Coupes manuelles</span>
             <Button variant="primary" className={c.cut} disabled={!duration} onClick={cutHere}>
               <Scissors size={22} aria-hidden="true" />Couper ici · {pos.toFixed(1)} s
             </Button>
@@ -414,7 +415,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
           </div>
           )}
 
-          {mode === 'manual' && (
+          {mode === 'rhythm' && (
             <div className={c.card}>
               <span className={c.label}>Rythme régulier</span>
               <p className={ui.hint} style={{ margin: 0 }}>Pour une vidéo où chaque exercice dure pareil. Remplace les coupes actuelles.</p>

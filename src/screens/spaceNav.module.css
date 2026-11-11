@@ -1,0 +1,5 @@
+.bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tabs { display: flex; gap: 8px; }
+.tab, .gear { display: inline-flex; align-items: center; gap: 8px; min-height: var(--touch); padding: 0 20px; border-radius: 26px; border: 2px solid var(--border); color: var(--text); font-weight: 600; font-size: 16px; text-decoration: none; }
+.on { background: var(--effort); border-color: var(--effort); color: var(--on-accent); }
+.gear { background: var(--surface); border-color: transparent; }

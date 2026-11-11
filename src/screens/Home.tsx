@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check, Flame, Play, Plus, Film, CalendarCheck, Sticker, Settings as SettingsIcon } from 'lucide-react'
+import { Check, Flame, Play, Plus, Film } from 'lucide-react'
 import { db } from '../data/db'
 import { Thumb } from '../library/Thumb'
 import { formatDuration, workoutDurationSec } from '../library/workouts'
@@ -64,7 +64,7 @@ export function Home() {
           {unrevealed > 0 && <Link to="/collection" className={[h.pill, h.pillGlow].join(' ')}>Une pochette t'attend</Link>}
           <Link to="/mon-rythme" className={h.pill}>
             <Flame size={20} color="var(--transition)" aria-hidden="true" style={{ animation: result.streak > 0 ? 'wiggle 2.8s ease-in-out infinite' : undefined, transformOrigin: '50% 90%' }} />
-            <span>{result.streak > 0 ? `${result.streak} semaine${result.streak > 1 ? 's' : ''} d'affilée` : 'Mon rythme'}</span>
+            <span>Mon espace{result.streak > 0 ? ` · ${result.streak} semaine${result.streak > 1 ? 's' : ''}` : ''}</span>
           </Link>
           <Link to="/videos" className={h.pillStrong}><Film size={20} aria-hidden="true" />Mes vidéos</Link>
           <Link to="/import" className={h.pillMain}><Plus size={22} aria-hidden="true" />Importer une vidéo</Link>
@@ -150,11 +150,6 @@ export function Home() {
         </div>
       </section>
 
-      <nav className={h.foot} aria-label="Navigation principale">
-        <Link to="/mon-rythme" className={h.navCard}><CalendarCheck size={24} aria-hidden="true" /><span className={h.navTitle}>Mon rythme</span></Link>
-        <Link to="/collection" className={h.navCard}><Sticker size={24} aria-hidden="true" /><span className={h.navTitle}>Collection</span></Link>
-        <Link to="/reglages" className={h.navCard}><SettingsIcon size={24} aria-hidden="true" /><span className={h.navTitle}>Réglages</span></Link>
-      </nav>
     </main>
   )
 }

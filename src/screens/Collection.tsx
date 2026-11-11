@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Screen } from '../app/Screen'
+import { SpaceNav } from './SpaceNav'
 import { Button } from '../ui/Button'
 import { db, loadSettings } from '../data/db'
 import { DEFAULT_SETTINGS } from '../data/settings'
@@ -32,6 +33,7 @@ export function Collection() {
 
   return (
     <Screen title="Collection" subtitle={`${got} sur ${total} stickers`}>
+      <SpaceNav />
       {pending.length > 0 && (
         <div className={c.banner} role="status">
           <span>{pending.length === 1 ? 'Une pochette t\'attend.' : `${pending.length} pochettes t'attendent.`}</span>

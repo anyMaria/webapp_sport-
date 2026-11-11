@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check, Flame, Play, Plus } from 'lucide-react'
+import { Check, Flame, Play, Plus, Film, CalendarCheck, Sticker, Settings as SettingsIcon } from 'lucide-react'
 import { db } from '../data/db'
 import { Thumb } from '../library/Thumb'
 import { formatDuration, workoutDurationSec } from '../library/workouts'
@@ -61,7 +61,8 @@ export function Home() {
             <Flame size={20} color="var(--transition)" aria-hidden="true" />
             <span>{result.streak > 0 ? `${result.streak} semaine${result.streak > 1 ? 's' : ''} d'affilée` : 'Nouvelle série'}</span>
           </Link>
-          <Link to="/import" className={h.pill} style={{ border: '2px solid var(--text)', background: 'transparent' }}><Plus size={18} aria-hidden="true" />Importer une vidéo</Link>
+          <Link to="/videos" className={h.pillStrong}><Film size={20} aria-hidden="true" />Mes vidéos</Link>
+          <Link to="/import" className={h.pillMain}><Plus size={22} aria-hidden="true" />Importer une vidéo</Link>
         </div>
       </header>
 
@@ -145,9 +146,9 @@ export function Home() {
       </section>
 
       <nav className={h.foot} aria-label="Navigation principale">
-        <Link to="/mon-rythme" className={h.link}>Mon rythme</Link>
-        <Link to="/collection" className={h.link}>Collection</Link>
-        <Link to="/reglages" className={h.link}>Réglages</Link>
+        <Link to="/mon-rythme" className={h.navCard}><CalendarCheck size={28} aria-hidden="true" /><span className={h.navTitle}>Mon rythme</span><span className={h.hint}>Ta série, ton créneau fixe</span></Link>
+        <Link to="/collection" className={h.navCard}><Sticker size={28} aria-hidden="true" /><span className={h.navTitle}>Collection</span><span className={h.hint}>Tes stickers et ta pochette</span></Link>
+        <Link to="/reglages" className={h.navCard}><SettingsIcon size={28} aria-hidden="true" /><span className={h.navTitle}>Réglages</span><span className={h.hint}>Son, voix, sauvegarde</span></Link>
       </nav>
     </main>
   )

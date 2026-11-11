@@ -1,3 +1,5 @@
+import type { Segment } from '../import/segments'
+
 export type SourceKind = 'file' | 'youtube'
 
 export interface VideoSource {
@@ -10,6 +12,9 @@ export interface VideoSource {
   opfsPath?: string // kind = "file"
   sizeBytes?: number // kind = "file"
   youtubeId?: string // kind = "youtube"
+  author?: string // créateur de la vidéo YouTube
+  /** Découpage en cours, enregistré tout seul (brouillon). Effacé à l'enregistrement des exercices. */
+  draftSegs?: Segment[]
   createdAt: string
 }
 

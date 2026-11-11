@@ -6,39 +6,18 @@ import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { importVideoFile, newId } from '../data/importFile'
 import { db } from '../data/db'
-import { deleteSourceRecords, workoutsUsingSource } from '../data/sources'
-import { removeVideoFile, formatBytes } from '../data/opfs'
-import { parseYouTubeId } from '../video/youtube'
-import { saveSegments } from '../import/saveExercises'
-import { formatTime, wholeVideo } from '../import/segments'
-import { originText, type VideoSource } from '../data/types'
+import { fetchYouTubeInfo, parseYouTubeId } from '../video/youtube'
+import { VideoItem } from './VideoItem'
+import type { VideoSource } from '../data/types'
 import ui from '../ui/ui.module.css'
 import s from '../app/app.module.css'
 import c from './importScreen.module.css'
 
-const SHORT_SEC = 90
 type Origin = VideoSource['originLabel']
 type Slot = 'social' | 'YouTube' | 'Autre'
 
-/** Titre modifiable : s'enregistre en quittant le champ ou avec Entrée. */
-function NameField({ source }: { source: VideoSource }) {
-  const [draft, setDraft] = useState<string | null>(null)
-  const commit = () => {
-    const t = (draft ?? source.title).trim()
-    if (t && t !== source.title) void db.sources.update(source.id, { title: t })
-    setDraft(null)
-  }
-  return (
-    <input
-      className={c.name}
-      value={draft ?? source.title}
-      aria-label="Nom de la vidéo"
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
-    />
-  )
-}
+/** Vidéos importées pendant cette ouverture de l'app (reste en mémoire quand on change d'écran). */
+let sessionImports: string[] = []
 
 /** Import : trois sources (TikTok, YouTube, autre). Les vidéos importées s'affichent juste en dessous. */
 export function Import() {
@@ -48,13 +27,14 @@ export function Import() {
   const [social, setSocial] = useState<'TikTok' | 'Instagram'>('TikTok')
   const [otherName, setOtherName] = useState('')
   const [current, setCurrent] = useState<{ name: string; ratio: number; origin: Origin } | null>(null)
-  const [fresh, setFresh] = useState<string[]>([])
+  const [fresh, setFreshState] = useState<string[]>(sessionImports)
+  const setFresh = (f: (x: string[]) => string[]) => { sessionImports = f(sessionImports); setFreshState(sessionImports) }
   const [info, setInfo] = useState<string | null>(null)
   const [errors, setErrors] = useState<string[]>([])
   const [link, setLink] = useState('')
   const [ytTitle, setYtTitle] = useState('')
+  const [linkBusy, setLinkBusy] = useState(false)
   const [linkError, setLinkError] = useState<string | null>(null)
-  const [toDelete, setToDelete] = useState<{ id: string; title: string; workouts: string[] } | null>(null)
 
   const sources = useLiveQuery(() => db.sources.toArray(), []) ?? []
   const counts = useLiveQuery(async () => {
@@ -62,7 +42,7 @@ export function Import() {
     for (const e of await db.exercises.toArray()) map[e.sourceId] = (map[e.sourceId] ?? 0) + 1
     return map
   }, []) ?? {}
-  const sorted = [...sources].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const sorted = sources.filter((x) => fresh.includes(x.id)).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
   const importFiles = async (files: FileList | null, slot: Slot, origin: Origin, note?: string) => {
     if (!files?.length) return
@@ -93,29 +73,15 @@ export function Import() {
   const addYouTube = async () => {
     const id = parseYouTubeId(link)
     if (!id) { setLinkError("Ce lien n'est pas reconnu. Colle l'adresse d'une vidéo YouTube."); return }
-    const source: VideoSource = { id: newId(), kind: 'youtube', title: ytTitle.trim() || 'Vidéo YouTube', durationSec: 0, originLabel: 'YouTube', youtubeId: id, createdAt: new Date().toISOString() }
+    setLinkBusy(true)
+    const found = await fetchYouTubeInfo(id)
+    setLinkBusy(false)
+    const source: VideoSource = { id: newId(), kind: 'youtube', title: ytTitle.trim() || found?.title || 'Vidéo YouTube', author: found?.author || undefined, durationSec: 0, originLabel: 'YouTube', youtubeId: id, createdAt: new Date().toISOString() }
     await db.sources.put(source)
     setLink(''); setYtTitle(''); setLinkError(null)
     setFresh((f) => [source.id, ...f])
     setInfo('Lien ajouté. Il est juste en dessous.')
     window.setTimeout(() => listTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
-  }
-
-  const keepWhole = async (src: VideoSource) => {
-    await saveSegments(src, wholeVideo(src.durationSec, src.title))
-  }
-
-  const askDelete = async (src: VideoSource) => {
-    const workouts = (await workoutsUsingSource(db, src.id)).map((w) => w.name)
-    setToDelete({ id: src.id, title: src.title, workouts })
-  }
-
-  const confirmDelete = async () => {
-    if (!toDelete) return
-    const { opfsPath } = await deleteSourceRecords(db, toDelete.id)
-    if (opfsPath) await removeVideoFile(opfsPath)
-    setFresh((f) => f.filter((x) => x !== toDelete.id))
-    setToDelete(null)
   }
 
   const fileButton = (slot: Slot, origin: Origin, label: string, primary = false, note?: string) => (
@@ -144,13 +110,13 @@ export function Import() {
             <input value={link} onChange={(e) => { setLink(e.target.value); setLinkError(null) }} placeholder="https://youtu.be/…" inputMode="url" />
           </label>
           {link.trim() && (
-            <label className={c.field}>Nom (facultatif)
+            <label className={c.field}>Nom (facultatif : le titre YouTube est repris tout seul)
               <input value={ytTitle} onChange={(e) => setYtTitle(e.target.value)} placeholder="Étirements du dos" />
             </label>
           )}
           {linkError && <p role="alert" className={[s.msg, s.msgErr].join(' ')}>{linkError}</p>}
           <div className={s.actions}>
-            <Button variant="primary" onClick={() => void addYouTube()} disabled={!link.trim()}>Ajouter le lien</Button>
+            <Button variant="primary" onClick={() => void addYouTube()} disabled={!link.trim() || linkBusy}>{linkBusy ? 'Lecture du titre…' : 'Ajouter le lien'}</Button>
             {fileButton('YouTube', 'YouTube', 'Choisir des fichiers')}
           </div>
         </Card>
@@ -173,45 +139,16 @@ export function Import() {
         {info && !current && <p role="status" className={[s.msg, s.msgOk].join(' ')}>{info}</p>}
         {errors.map((e) => <p key={e} role="alert" className={[s.msg, s.msgErr].join(' ')}>{e}</p>)}
 
-        <Card title={`Mes vidéos${sorted.length ? ` · ${sorted.length}` : ''}`}>
-          {sorted.length === 0 && <p className={s.empty}>Aucune vidéo pour l'instant. Choisis une source ci-dessus.</p>}
-          <div className={c.list}>
-            {sorted.map((src) => {
-              const n = counts[src.id] ?? 0
-              const short = src.kind === 'file' && src.durationSec < SHORT_SEC
-              const isFresh = fresh.includes(src.id)
-              const meta = [originText(src), src.durationSec ? formatTime(src.durationSec) : null, src.kind === 'file' ? formatBytes(src.sizeBytes ?? 0) : 'lien YouTube'].filter(Boolean).join(' · ')
-              return (
-                <div key={src.id} className={[c.item, isFresh ? c.fresh : ''].join(' ')}>
-                  <div className={c.itemHead}>
-                    <NameField source={src} />
-                    {isFresh && <span className={c.badge}>Nouvelle</span>}
-                  </div>
-                  <span className={c.meta}>{meta}{n > 0 ? ` · ${n} exercice${n > 1 ? 's' : ''}` : ' · pas encore découpée'}</span>
-                  {toDelete?.id === src.id ? (
-                    <div role="alertdialog" aria-label="Supprimer la vidéo" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <p className={s.msg}>
-                        Supprimer « {toDelete.title} » et ses exercices ?
-                        {toDelete.workouts.length > 0 && ` Séances touchées : ${toDelete.workouts.join(', ')}.`}
-                      </p>
-                      <div className={s.actions}>
-                        <Button variant="danger" onClick={() => void confirmDelete()}>Supprimer</Button>
-                        <Button onClick={() => setToDelete(null)}>Annuler</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className={s.actions}>
-                      {n === 0 && short && <Button variant="primary" onClick={() => void keepWhole(src)}>Garder la vidéo entière</Button>}
-                      {n === 0 && <Button variant={short ? 'secondary' : 'primary'} onClick={() => nav(`/decoupage/${src.id}`)}>Découper</Button>}
-                      {n > 0 && <Button variant="primary" onClick={() => nav('/bibliotheque')}>Voir les exercices</Button>}
-                      <Button variant="danger" onClick={() => void askDelete(src)}>Supprimer</Button>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </Card>
+        {sorted.length > 0 && (
+          <Card title={`Importées maintenant · ${sorted.length}`}>
+            <div className={c.list}>
+              {sorted.map((src) => (
+                <VideoItem key={src.id} src={src} exerciseCount={counts[src.id] ?? 0} fresh onDeleted={(id) => setFresh((f) => f.filter((x) => x !== id))} />
+              ))}
+            </div>
+            <div className={s.actions}><Button onClick={() => nav('/videos')}>Voir toutes mes vidéos</Button></div>
+          </Card>
+        )}
       </div>
     </Screen>
   )

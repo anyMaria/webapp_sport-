@@ -70,3 +70,35 @@ export async function createYTPlayer(host: HTMLElement, videoId: string, startSe
     })
   })
 }
+
+/** Titre et créateur, via le service public oEmbed de YouTube (sans clé). Renvoie null hors connexion ou en cas d'échec. */
+export async function fetchYouTubeInfo(id: string): Promise<{ title: string; author: string } | null> {
+  try {
+    const ctl = new AbortController()
+    const t = window.setTimeout(() => ctl.abort(), 6000)
+    const r = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`, { signal: ctl.signal })
+    window.clearTimeout(t)
+    if (!r.ok) return null
+    const j = (await r.json()) as { title?: string; author_name?: string }
+    return j.title ? { title: j.title, author: j.author_name ?? '' } : null
+  } catch {
+    return null
+  }
+}
+
+/** Repères (chapitres) de la description, via la fonction serveur facultative. Voir api/youtube-chapters.ts. */
+export async function youtubeChaptersEnabled(): Promise<boolean> {
+  try {
+    const r = await fetch('/api/youtube-chapters')
+    return r.ok && ((await r.json()) as { enabled?: boolean }).enabled === true
+  } catch {
+    return false
+  }
+}
+
+export async function fetchYouTubeChapters(id: string): Promise<string> {
+  const r = await fetch(`/api/youtube-chapters?id=${encodeURIComponent(id)}`)
+  const j = (await r.json().catch(() => ({}))) as { description?: string; error?: string }
+  if (!r.ok) throw new Error(j.error ?? 'Impossible de lire la description de la vidéo.')
+  return j.description ?? ''
+}

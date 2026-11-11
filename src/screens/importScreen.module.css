@@ -10,3 +10,4 @@
 .badge { padding: 4px 10px; border-radius: var(--radius-s); background: var(--bg-deep); color: var(--effort); font-size: 13px; font-weight: 600; }
 .sep { height: 1px; background: var(--line); border: 0; margin: 4px 0; }
 @media (max-width: 900px) { .sources { grid-template-columns: 1fr; } }
+.importLink { display: inline-flex; align-items: center; min-height: 64px; padding: 0 28px; border-radius: 32px; background: var(--effort); color: var(--on-accent); font-family: var(--font-title); font-weight: 600; font-size: 18px; text-decoration: none; }

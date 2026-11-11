@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Minus, Plus, Scissors, Merge, Play, Pause, Rewind, FastForward } from 'lucide-react'
+import { Minus, Plus, Scissors, Merge, Play, Pause, Rewind, FastForward, RotateCcw } from 'lucide-react'
 import { db } from '../data/db'
 import type { VideoSource } from '../data/types'
 import { useOpfsUrl } from '../video/useOpfsUrl'
@@ -10,7 +10,7 @@ import {
   adjust, clampCue, CUE_MAX, durationOf, formatTime, keptSegments, mergeWithNext, splitAt, wholeVideo, type Segment,
 } from '../import/segments'
 import { Screen } from '../app/Screen'
-import { createYTPlayer, type YTPlayer } from '../video/youtube'
+import { createYTPlayer, fetchYouTubeChapters, youtubeChaptersEnabled, type YTPlayer } from '../video/youtube'
 import { parseChapters } from '../import/chapters'
 import { rhythmBoundaries } from '../import/detect/rhythm'
 import { mergeCandidates } from '../import/detect/merge'
@@ -26,7 +26,10 @@ import c from '../import/import.module.css'
 import s from '../app/app.module.css'
 
 export const TAGS = ['dos', 'épaules', 'hanches', 'nuque', 'jambes', 'poignets']
-const RATES = [1, 0.75, 0.5, 0.25]
+const RATES = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 5, 10]
+/** Le lecteur YouTube n'accepte pas plus de 2x. */
+const YT_MAX_RATE = 2
+type Mode = 'manual' | 'ai' | 'youtube'
 const STEPS = [0.5, 1, 3, 5]
 const fmt = (n: number) => String(n).replace('.', ',')
 
@@ -47,7 +50,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [chapterText, setChapterText] = useState('')
   const ytHost = useRef<HTMLDivElement>(null)
   const ytRef = useRef<YTPlayer | null>(null)
-  const [segs, setSegs] = useState<Segment[]>(() => (isYT && !source.durationSec ? [] : wholeVideo(source.durationSec)))
+  const [segs, setSegs] = useState<Segment[]>(() => source.draftSegs ?? (isYT && !source.durationSec ? [] : wholeVideo(source.durationSec)))
   const segsRef = useRef<Segment[]>([])
   const [selId, setSelId] = useState(() => segs[0]?.id ?? '')
   const [pos, setPos] = useState(0)
@@ -59,6 +62,10 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [step, setStep] = useState(1)
   const [playing, setPlaying] = useState(false)
   const [cutMsg, setCutMsg] = useState<string | null>(null)
+  const [mode, setMode] = useState<Mode>(isYT ? 'youtube' : 'manual')
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [chaptersOn, setChaptersOn] = useState(false)
+  const [chaptersBusy, setChaptersBusy] = useState(false)
   const [useShots, setUseShots] = useState(true)
   const [useAudio, setUseAudio] = useState(true)
   const [useRhythm, setUseRhythm] = useState(false)
@@ -74,7 +81,6 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [aiError, setAiError] = useState<string | null>(null)
   useEffect(() => { if (source.kind === 'file') void aiLabelsEnabled().then(setAiOn) }, [source.kind])
   const abort = useRef<AbortController | null>(null)
-  const autoRan = useRef(false)
 
   const analyze = async () => {
     if (!source.opfsPath) return
@@ -102,13 +108,16 @@ function SplitEditor({ source }: { source: VideoSource }) {
     }
   }
 
-  // Fichier de plus de 90 s : l'analyse démarre toute seule à l'ouverture.
+  // Brouillon : le découpage en cours s'enregistre tout seul.
+  const firstRun = useRef(true)
   useEffect(() => {
-    if (autoRan.current || source.durationSec < 90) return
-    autoRan.current = true
-    void analyze()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (firstRun.current) { firstRun.current = false; return }
+    if (saving) return
+    const t = window.setTimeout(() => { void db.sources.update(source.id, { draftSegs: segs }) }, 400)
+    return () => window.clearTimeout(t)
+  }, [segs, saving, source.id])
+  useEffect(() => { if (isYT) void youtubeChaptersEnabled().then(setChaptersOn) }, [isYT])
+
   useEffect(() => () => abort.current?.abort(), [])
 
   useEffect(() => { segsRef.current = segs }, [segs])
@@ -247,6 +256,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const save = async () => {
     setSaving(true)
     await saveSegments(source, segs)
+    await db.sources.update(source.id, { draftSegs: undefined })
     nav('/bibliotheque')
   }
 
@@ -301,18 +311,44 @@ function SplitEditor({ source }: { source: VideoSource }) {
             </Button>
             <Button onClick={() => seekTo(getTime() + step)} aria-label={`Avancer de ${fmt(step)} secondes`}>{fmt(step)} s<FastForward size={20} aria-hidden="true" /></Button>
             <div className={c.speeds} role="group" aria-label="Vitesse de lecture">
-              {RATES.map((r) => (
+              {RATES.filter((r) => !isYT || r <= YT_MAX_RATE).map((r) => (
                 <button key={r} type="button" className={[c.pick, rate === r ? c.pickOn : ''].join(' ')} aria-pressed={rate === r} onClick={() => changeRate(r)}>{fmt(r)}x</button>
               ))}
             </div>
           </div>
 
           <Timeline segs={segs} duration={duration} pos={pos} selId={selId} step={step} onSeek={seekTo} />
+
+          <section className={c.list} aria-label="Segments">
+          <div className={c.listHead}>
+            <span className={c.label}>Segments</span>
+            <span className={s.sub}>Touche un segment pour y aller</span>
+          </div>
+          {segs.map((x, i) => (
+            <div key={x.id} className={[c.row, !x.kept ? c.rowOff : '', x.id === selId ? c.rowSel : ''].join(' ')} onClick={() => { setSelId(x.id); seekTo(x.startSec) }}>
+              <div className={c.rowMain}>
+                <input className={c.rowName} style={{ background: 'transparent', border: 'none', color: 'inherit', font: 'inherit', padding: 0, minHeight: 28 }} value={x.name} aria-label={`Nom du segment ${i + 1}`} onFocus={() => setSelId(x.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(x.id, { name: e.target.value })} />
+                <span className={c.rowTime}>{formatTime(x.startSec)} – {formatTime(x.endSec)} · {Math.round(durationOf(x))} s</span>
+              </div>
+              {x.verify && <span className={c.verify}>Fin à vérifier</span>}
+              <button type="button" className={[c.keep, x.kept ? '' : c.keepOff].join(' ')} aria-pressed={x.kept} aria-label={`${x.name} : ${x.kept ? 'gardé' : 'retiré'}`} onClick={(e) => { e.stopPropagation(); patch(x.id, { kept: !x.kept }) }}>{x.kept ? 'Gardé' : 'Retiré'}</button>
+            </div>
+          ))}
+        </section>
         </div>
 
         <div className={c.side}>
           <div className={c.card}>
-            <span className={c.label}>Découpe</span>
+            <span className={c.label}>Mode de découpe</span>
+            <div className={c.pickRow} role="group" aria-label="Mode de découpe">
+              <button type="button" className={[c.pick, mode === 'manual' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'manual'} onClick={() => setMode('manual')}>Manuelle</button>
+              {!isYT && <button type="button" className={[c.pick, mode === 'ai' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'ai'} onClick={() => setMode('ai')}>Découpe IA</button>}
+              {isYT && <button type="button" className={[c.pick, mode === 'youtube' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'youtube'} onClick={() => setMode('youtube')}>Marquage YouTube</button>}
+            </div>
+          </div>
+
+          <div className={c.card}>
+            <span className={c.label}>Découpe à la main</span>
             <Button variant="primary" className={c.cut} disabled={!duration} onClick={cutHere}>
               <Scissors size={22} aria-hidden="true" />Couper ici · {pos.toFixed(1)} s
             </Button>
@@ -351,24 +387,20 @@ function SplitEditor({ source }: { source: VideoSource }) {
             ) : (
               <p className={ui.hint} style={{ margin: 0 }}>Lance la lecture et touche « Couper ici » à chaque changement d'exercice.</p>
             )}
+            <hr className={c.sep} />
+            {confirmReset ? (
+              <div role="alertdialog" aria-label="Tout remettre à zéro" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <p className={s.msg}>Effacer toutes les coupes et recommencer avec un seul segment ?</p>
+                <div className={s.actions}>
+                  <Button variant="danger" onClick={() => { resetAll(); setConfirmReset(false) }}>Oui, tout effacer</Button>
+                  <Button onClick={() => setConfirmReset(false)}>Annuler</Button>
+                </div>
+              </div>
+            ) : (
+              <Button variant="danger" disabled={!duration || segs.length < 2} onClick={() => setConfirmReset(true)}><RotateCcw size={18} aria-hidden="true" />Tout remettre à zéro</Button>
+            )}
           </div>
 
-          <section className={c.list} aria-label="Segments">
-            <div className={c.listHead}>
-              <span className={c.label}>Segments</span>
-              <span className={s.sub}>Touche un segment pour y aller</span>
-            </div>
-            {segs.map((x, i) => (
-              <div key={x.id} className={[c.row, !x.kept ? c.rowOff : '', x.id === selId ? c.rowSel : ''].join(' ')} onClick={() => { setSelId(x.id); seekTo(x.startSec) }}>
-                <div className={c.rowMain}>
-                  <input className={c.rowName} style={{ background: 'transparent', border: 'none', color: 'inherit', font: 'inherit', padding: 0, minHeight: 28 }} value={x.name} aria-label={`Nom du segment ${i + 1}`} onFocus={() => setSelId(x.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(x.id, { name: e.target.value })} />
-                  <span className={c.rowTime}>{formatTime(x.startSec)} – {formatTime(x.endSec)} · {Math.round(durationOf(x))} s</span>
-                </div>
-                {x.verify && <span className={c.verify}>Fin à vérifier</span>}
-                <button type="button" className={[c.keep, x.kept ? '' : c.keepOff].join(' ')} aria-pressed={x.kept} aria-label={`${x.name} : ${x.kept ? 'gardé' : 'retiré'}`} onClick={(e) => { e.stopPropagation(); patch(x.id, { kept: !x.kept }) }}>{x.kept ? 'Gardé' : 'Retiré'}</button>
-              </div>
-            ))}
-          </section>
 
           {sel && (
             <div className={c.card}>
@@ -386,10 +418,21 @@ function SplitEditor({ source }: { source: VideoSource }) {
             </div>
           )}
 
-          {isYT ? (
+          {isYT && mode === 'youtube' && (
             <div className={c.card}>
               <span className={c.label}>Marquage YouTube</span>
               <p className={ui.hint} style={{ margin: 0 }}>L'analyse automatique n'est pas possible avec le lecteur YouTube : coupe à la main pendant la lecture, par rythme régulier, ou avec les repères de la description.</p>
+              {chaptersOn && source.youtubeId && (
+                <Button disabled={chaptersBusy} onClick={async () => {
+                  setChaptersBusy(true); setNotes([])
+                  try {
+                    const d = await fetchYouTubeChapters(source.youtubeId!)
+                    setChapterText(d)
+                    setNotes([parseChapters(d, duration || 1).length ? 'Repères récupérés dans la description. Vérifie-les, puis touche « Importer les repères ».' : 'Cette vidéo n’a pas de repères dans sa description.'])
+                  } catch (e) { setNotes([(e as Error).message]) }
+                  setChaptersBusy(false)
+                }}>{chaptersBusy ? 'Lecture…' : 'Récupérer les repères de YouTube'}</Button>
+              )}
               <label className={c.field}>Repères de la description (une ligne par exercice, ex. « 2:15 Chat-vache »)
                 <textarea value={chapterText} onChange={(e) => setChapterText(e.target.value)} rows={4} style={{ borderRadius: 14, border: '2px solid var(--border)', background: 'var(--bg-deep)', padding: 10, color: 'inherit', font: 'inherit' }} />
               </label>
@@ -408,13 +451,15 @@ function SplitEditor({ source }: { source: VideoSource }) {
                   const r = mergeCandidates(rhythmBoundaries({ effortSec: effort, restSec: rest, startSec: rhythmStart }, duration, []), duration)
                   setSegs(r); setSelId(r[0]?.id ?? ''); setNotes(['Rythme régulier appliqué.'])
                 }}>Appliquer le rythme régulier</Button>
-                <Button onClick={resetAll}>Tout remettre à zéro</Button>
               </div>
               {notes.map((n) => <p key={n} className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
             </div>
-          ) : (
+          )}
+
+          {!isYT && mode === 'ai' && (
             <div className={c.card}>
-              <span className={c.label}>Pré-marquage automatique</span>
+              <span className={c.label}>Découpe IA</span>
+              <p className={ui.hint} style={{ margin: 0 }}>Propose des coupes automatiquement. À vérifier : corrige ensuite à la main.</p>
               <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Changements de plan</span><Switch on={useShots} onChange={setUseShots} label="Changements de plan" /></div>
               <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Bips et silences</span><Switch on={useAudio} onChange={setUseAudio} label="Bips et silences" /></div>
               <div className={s.actions} style={{ justifyContent: 'space-between' }}>
@@ -437,8 +482,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
               ) : (
                 <div className={s.actions}>
                   <Button onClick={() => void analyze()} disabled={!useShots && !useAudio && !useRhythm}>Analyser</Button>
-                  <Button onClick={resetAll}>Tout remettre à zéro</Button>
-                </div>
+                  </div>
               )}
               {notes.map((n) => <p key={n} className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
               {aiOn && !aiProposals && (

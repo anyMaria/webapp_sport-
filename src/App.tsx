@@ -5,6 +5,7 @@ import { Settings } from './screens/Settings'
 import { Rhythm } from './screens/Rhythm'
 import { Collection } from './screens/Collection'
 import { Demo } from './screens/Demo'
+import { Videos } from './screens/Videos'
 import { Import } from './screens/Import'
 import { Split } from './screens/Split'
 import { Library } from './library/Library'
@@ -19,6 +20,7 @@ export function App() {
       <Route path="/bibliotheque" element={<Library />} />
       <Route path="/composer/:id" element={<Composer />} />
       <Route path="/import" element={<Import />} />
+      <Route path="/videos" element={<Videos />} />
       <Route path="/decoupage/:sourceId" element={<Split />} />
       <Route path="/mon-rythme" element={<Rhythm />} />
       <Route path="/collection" element={<Collection />} />

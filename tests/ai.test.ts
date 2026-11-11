@@ -66,6 +66,8 @@ describe('une étiquette par image', () => {
     expect(p).toContain('« Chat-vache »')
     expect(p).toContain('JSON')
     expect(marksPrompt(12, 0.45, '')).not.toContain('Juste avant')
+    expect(marksPrompt(12, 0.45, '')).toContain('en français')
+    expect(marksPrompt(12, 0.45, '', 'en')).toContain('in English')
   })
 })
 

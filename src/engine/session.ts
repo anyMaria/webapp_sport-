@@ -16,6 +16,8 @@ export interface SessionConfig {
   items: PlayItem[]
   countdownSec: number
   extendSec: number
+  /** Langue de l'annonce du suivant (français par défaut). */
+  voiceLang?: 'fr' | 'en'
 }
 
 export type Phase = 'ready' | 'exercise' | 'transition' | 'paused' | 'finished'
@@ -69,8 +71,10 @@ export function transitionMs(c: SessionConfig, item: PlayItem): number {
   return Math.max(c.countdownSec, item.restAfterSec) * 1000
 }
 
-export function speechFor(item: PlayItem): string {
-  const base = `Ensuite : ${item.name}, ${item.durationSec} secondes.`
+/** Phrase dite avant un exercice : « Ensuite : Pont, 30 secondes. » ou « Next: Bridge, 30 seconds. », puis la précision. */
+export function speechFor(item: Pick<PlayItem, 'name' | 'cue' | 'durationSec'>, lang: 'fr' | 'en' = 'fr'): string {
+  const n = item.durationSec
+  const base = lang === 'en' ? `Next: ${item.name}, ${n} second${n === 1 ? '' : 's'}.` : `Ensuite : ${item.name}, ${n} seconde${n > 1 ? 's' : ''}.`
   return item.cue ? `${base} ${item.cue}` : base
 }
 
@@ -89,7 +93,7 @@ function enterTransition(s: SessionState, now: number): Step {
   const next = s.config.items[s.index + 1]!
   return {
     state: { ...s, phase: 'transition', remainingMs: ms, phaseMs: ms, lastTickAt: now },
-    effects: [{ type: 'speak', text: speechFor(next) }],
+    effects: [{ type: 'speak', text: speechFor(next, s.config.voiceLang) }],
   }
 }
 

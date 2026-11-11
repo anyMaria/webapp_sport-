@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, loadSettings, saveSettings } from '../data/db'
 import { DEFAULT_SETTINGS } from '../data/settings'
-import { originText } from '../data/types'
+import { originText, type VoiceLang } from '../data/types'
+import { speechFor } from '../engine/session'
 import { BackupError, exportBackup, parseBackup, restoreBackup, type BackupFile } from '../data/backup'
 import { deleteSourceRecords, workoutsUsingSource } from '../data/sources'
 import { formatBytes, readStorageInfo, removeVideoFile, requestPersist, type StorageInfo } from '../data/opfs'
@@ -15,15 +16,15 @@ import { Stepper } from '../ui/Stepper'
 import ui from '../ui/ui.module.css'
 import s from '../app/app.module.css'
 
-function useFrenchVoices() {
+function useVoices(lang: VoiceLang) {
   const [voices, setVoices] = useState<string[]>([])
   useEffect(() => {
     if (!('speechSynthesis' in window)) return
-    const load = () => setVoices(speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith('fr')).map((v) => v.name))
+    const load = () => setVoices(speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith(lang)).map((v) => v.name))
     load()
     speechSynthesis.addEventListener('voiceschanged', load)
     return () => speechSynthesis.removeEventListener('voiceschanged', load)
-  }, [])
+  }, [lang])
   return voices
 }
 
@@ -32,7 +33,7 @@ type Msg = { kind: 'ok' | 'err'; text: string } | null
 export function Settings() {
   const settings = useLiveQuery(() => loadSettings(), []) ?? DEFAULT_SETTINGS
   const sources = useLiveQuery(() => db.sources.toArray(), []) ?? []
-  const voices = useFrenchVoices()
+  const voices = useVoices(settings.voiceLang)
   const [storage, setStorage] = useState<StorageInfo | null>(null)
   const [msg, setMsg] = useState<Msg>(null)
   const [pending, setPending] = useState<BackupFile | null>(null)
@@ -90,7 +91,7 @@ export function Settings() {
 
   const testSound = async () => {
     await playBeep(settings.beepVolume, { freq: 880, durationSec: 0.2 })
-    if (settings.audioMode === 'music+beeps+voice') speak('Ensuite : Rotation du buste, quarante-cinq secondes.', settings.voiceName)
+    if (settings.audioMode === 'music+beeps+voice') speak(speechFor({ name: settings.voiceLang === 'en' ? 'Cat cow' : 'Chat-vache', durationSec: 45 }, settings.voiceLang), settings.voiceName, settings.voiceLang)
   }
 
   return (
@@ -101,7 +102,14 @@ export function Settings() {
             <Row label="Volume des bips">
               <input className={ui.range} type="range" min={0} max={1} step={0.05} value={settings.beepVolume} aria-label="Volume des bips" onChange={(e) => void saveSettings({ beepVolume: Number(e.target.value) })} />
             </Row>
-            <Row label="Voix des consignes" hint={voices.length ? undefined : 'Aucune voix française trouvée sur cet appareil.'}>
+            <Row label="Langue des annonces" hint="Ce que la voix dit entre deux exercices. Choisis la langue de tes noms d'exercices.">
+              <div className={s.actions} role="group" aria-label="Langue des annonces">
+                {([['en', 'English'], ['fr', 'Français']] as const).map(([v, label]) => (
+                  <Button key={v} aria-pressed={settings.voiceLang === v} variant={settings.voiceLang === v ? 'primary' : 'secondary'} onClick={() => void saveSettings({ voiceLang: v, voiceName: undefined })}>{label}</Button>
+                ))}
+              </div>
+            </Row>
+            <Row label="Voix des consignes" hint={voices.length ? undefined : settings.voiceLang === 'en' ? 'Aucune voix anglaise trouvée sur cet appareil.' : 'Aucune voix française trouvée sur cet appareil.'}>
               <select className={ui.select} aria-label="Voix des consignes" value={settings.voiceName ?? ''} onChange={(e) => void saveSettings({ voiceName: e.target.value || undefined })}>
                 <option value="">Voix par défaut</option>
                 {voices.map((v) => <option key={v} value={v}>{v}</option>)}

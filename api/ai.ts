@@ -262,17 +262,22 @@ export function parseLabels(rawText: string, ids: string[]): Label[] {
   }
 }
 
-interface MarksBody { image: string; count: number; stepSec: number; prev: string }
+type Lang = 'fr' | 'en'
+const langOf = (b: unknown): Lang => ((b as { lang?: unknown } | null)?.lang === 'en' ? 'en' : 'fr')
+/** Langue des noms et consignes demandés à l'IA (ceux que la voix dira). */
+const inLang = (l: Lang) => (l === 'en' ? 'en anglais (in English)' : 'en français')
+
+interface MarksBody { image: string; count: number; stepSec: number; prev: string; lang: Lang }
 function parseMarksBody(b: unknown): MarksBody | null {
   const o = b as { image?: unknown; count?: unknown; stepSec?: unknown; prev?: unknown } | null
   const count = Number(o?.count)
   const stepSec = Number(o?.stepSec)
   if (!b64ok(o?.image) || !Number.isInteger(count) || count < 1 || count > MAX_PER_SHEET) return null
   if (!Number.isFinite(stepSec) || stepSec <= 0 || stepSec > 3600) return null
-  return { image: o.image, count, stepSec, prev: typeof o?.prev === 'string' ? o.prev.replace(/[«»"\n\r]/g, ' ').trim().slice(0, 60) : '' }
+  return { image: o.image, count, stepSec, prev: typeof o?.prev === 'string' ? o.prev.replace(/[«»"\n\r]/g, ' ').trim().slice(0, 60) : '', lang: langOf(b) }
 }
 
-export function marksPrompt(count: number, stepSec: number, prev: string): string {
+export function marksPrompt(count: number, stepSec: number, prev: string, lang: Lang = 'fr'): string {
   const step = String(Math.round(stepSec * 10) / 10).replace('.', ',')
   return (
     `Voici une planche de ${count} images extraites d'une vidéo d'exercices (étirements, mobilité, posture, sport). ` +
@@ -280,7 +285,7 @@ export function marksPrompt(count: number, stepSec: number, prev: string): strin
     (prev ? `Juste avant l'image 1, la vidéo montrait : « ${prev} ». Si l'image 1 montre encore la même chose, garde ce nom. ` : '') +
     "Pour chaque image, donne le numéro de l'exercice montré : le même numéro tant que la personne fait le même exercice (même posture, ou même mouvement répété), un nouveau numéro (1, 2, 3…) dès que l'exercice change, même s'il ne dure que quelques secondes. " +
     "Mets 0 quand l'image ne montre pas d'exercice : introduction, texte seul, personne qui parle ou se déplace, fin. " +
-    `Puis donne à chaque exercice un nom court en français (40 caractères au plus) et une consigne (${CUE_MAX} caractères au plus). ` +
+    `Puis donne à chaque exercice un nom court ${inLang(lang)} (40 caractères au plus) et une consigne ${inLang(lang)} (${CUE_MAX} caractères au plus). ` +
     `Réponds uniquement en JSON, avec exactement ${count} entrées dans "images", sous cette forme : ` +
     '{"images":[{"n":1,"ex":0},{"n":2,"ex":1},{"n":3,"ex":1}],"exercices":[{"ex":1,"name":"Chat-vache","cue":"Dos rond, puis dos creux"}]}'
   )
@@ -326,7 +331,7 @@ export default async function handler(req: Req, res: Res): Promise<void> {
   if (task === 'marks') {
     const body = parseMarksBody(req.body)
     if (!body) return res.status(400).json({ error: 'Requête invalide.' })
-    const r = await ask(k, p.base, mdls, [{ type: 'text', text: marksPrompt(body.count, body.stepSec, body.prev) }, jpeg(body.image)], 3000)
+    const r = await ask(k, p.base, mdls, [{ type: 'text', text: marksPrompt(body.count, body.stepSec, body.prev, body.lang) }, jpeg(body.image)], 3000)
     if (!r.ok) return fail(r)
     const marks = parseMarks(r.text, body.count)
     return res.status(200).json(marks ? { labels: marks.labels, names: marks.names } : { labels: null, note: whyEmpty(r) })
@@ -337,8 +342,8 @@ export default async function handler(req: Req, res: Res): Promise<void> {
     const content: Part[] = [{
       type: 'text',
       text:
-        "Voici des bandes d'images, une par segment d'une vidéo d'étirements ou de posture (trois moments du segment côte à côte). Pour chaque segment, donne un nom d'exercice court en français " +
-        `et une consigne de ${CUE_MAX} caractères au plus. Réponds uniquement en JSON, sous cette forme : {"labels":[{"id":"…","name":"…","cue":"…"}]}.`,
+        "Voici des bandes d'images, une par segment d'une vidéo d'étirements ou de posture (trois moments du segment côte à côte). " +
+        `Pour chaque segment, donne un nom d'exercice court ${inLang(langOf(req.body))} et une consigne ${inLang(langOf(req.body))} de ${CUE_MAX} caractères au plus. Réponds uniquement en JSON, sous cette forme : {"labels":[{"id":"…","name":"…","cue":"…"}]}.`,
     }]
     for (const s of segs) { content.push({ type: 'text', text: `Segment ${s.id} :` }); content.push(jpeg(s.image)) }
     const r = await ask(k, p.base, mdls, content, 4000)

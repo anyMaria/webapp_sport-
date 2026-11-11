@@ -147,7 +147,7 @@ const AI_MIN_GAP_SEC = 1.5
  * qu'une grosse demande. Quand le service est saturé, on attend le délai qu'il indique et on réessaie. Une planche en échec n'arrête pas les autres.
  */
 export async function requestMarks(
-  sheets: Sheet[], durationSec: number, signal: AbortSignal, onStep: (done: number, total: number, waitSec?: number) => void,
+  sheets: Sheet[], durationSec: number, lang: 'fr' | 'en', signal: AbortSignal, onStep: (done: number, total: number, waitSec?: number) => void,
 ): Promise<{ found: Found[]; notes: string[] }> {
   const results: (SheetMarks | null)[] = []
   const problems = new Set<string>()
@@ -158,7 +158,7 @@ export async function requestMarks(
     let got: SheetMarks | null = null
     for (let attempt = 1; attempt <= MAX_TRIES && !got; attempt++) {
       try {
-        const body = await aiPost<{ labels?: number[] | null; names?: SheetMarks['names']; note?: string }>({ task: 'marks', image: sheet.image, count: sheet.times.length, stepSec, prev }, signal)
+        const body = await aiPost<{ labels?: number[] | null; names?: SheetMarks['names']; note?: string }>({ task: 'marks', image: sheet.image, count: sheet.times.length, stepSec, prev, lang }, signal)
         if (Array.isArray(body.labels) && body.labels.length === sheet.times.length) got = { labels: body.labels, names: body.names ?? [] }
         else { if (body.note) problems.add(body.note); break }
       } catch (e) {

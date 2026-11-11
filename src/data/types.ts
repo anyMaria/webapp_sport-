@@ -73,6 +73,8 @@ export interface JokerUse {
 }
 
 export type AudioMode = 'music' | 'music+beeps' | 'music+beeps+voice' | 'video'
+/** Langue des annonces dites à voix haute (l'interface reste en français). */
+export type VoiceLang = 'fr' | 'en'
 
 export interface Settings {
   weeklyGoal: number // 3 : séances par semaine, app et sport fait ailleurs
@@ -84,6 +86,7 @@ export interface Settings {
   extendSec: number // 30
   beepVolume: number // 0 à 1
   voiceName?: string
+  voiceLang: VoiceLang // 'en' : les noms d'exercices sont en anglais
   userName: string // prénom pour la salutation, vide par défaut
   slotWorkoutId?: string // séance choisie pour le créneau
   reminder: boolean // alarme 10 minutes avant, dans le fichier du calendrier

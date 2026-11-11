@@ -27,6 +27,8 @@ describe('moteur de séance', () => {
     expect(state.phase).toBe('transition')
     expect(state.remainingMs).toBe(5000)
     expect(effects).toContainEqual({ type: 'speak', text: 'Ensuite : Ex 2, 10 secondes.' })
+    const en = run(createSession({ ...cfg(), voiceLang: 'en' }), [{ type: 'START', now: 0 }, { type: 'TICK', now: 10_000 }])
+    expect(en.effects).toContainEqual({ type: 'speak', text: 'Next: Ex 2, 10 seconds.' })
     const next = run(state, [{ type: 'TICK', now: 15_000 }])
     expect(next.state.phase).toBe('exercise')
     expect(next.state.index).toBe(1)

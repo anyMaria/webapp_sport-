@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Check, ChevronDown, ChevronLeft, FastForward, ListOrdered, Merge, Pause, Play, Rewind, RotateCcw, Scissors, Sparkles, Timer, Trash2 } from 'lucide-react'
-import { db } from '../data/db'
+import { db, loadSettings } from '../data/db'
+import { speechFor } from '../engine/session'
 import type { VideoSource } from '../data/types'
 import { useOpfsUrl } from '../video/useOpfsUrl'
 import { saveSegments } from '../import/saveExercises'
@@ -101,6 +102,8 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [aiProposals, setAiProposals] = useState<Label[] | null>(null)
   const [aiError, setAiError] = useState<string | null>(null)
   const [aiInfo, setAiInfo] = useState<AiStatus | null>(null) // null : vérification en cours
+  /** Langue des annonces : celle des noms proposés par l'IA et de la phrase affichée en exemple. */
+  const lang = useLiveQuery(() => loadSettings(), [])?.voiceLang ?? 'en'
   const aiOn = aiInfo?.enabled === true
   useEffect(() => { void aiStatus().then(setAiInfo) }, [])
   const abort = useRef<AbortController | null>(null)
@@ -314,7 +317,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
         try { shots = (await analyzeShots(file, source.durationSec, (ratio) => setProgress({ label: 'Préparation des images', ratio: ratio / 2 }), ctl.signal)).boundaries.map((b) => b.t) } catch (e) { if ((e as Error).name === 'AbortError') throw e }
       }
       const sheets = await sampleSheets(file, source.durationSec, ctl.signal, (ratio) => setProgress({ label: 'Préparation des images', ratio: 0.5 + ratio / 2 }))
-      const { found, notes: problems } = await requestMarks(sheets, source.durationSec, ctl.signal, (done, total, waitSec) => setProgress({
+      const { found, notes: problems } = await requestMarks(sheets, source.durationSec, lang, ctl.signal, (done, total, waitSec) => setProgress({
         label: waitSec ? `Le service d'IA demande une pause de ${waitSec} s, puis ça reprend` : `L'IA regarde la vidéo (partie ${done + 1} sur ${total})`,
         ratio: done / total,
       }))
@@ -342,7 +345,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
     try {
       const file = await getVideoFile(source.opfsPath)
       const frames = await extractFrames(file, keptSegments(segs), ctl.signal)
-      const labels = await requestLabels(frames, ctl.signal)
+      const labels = await requestLabels(frames, lang, ctl.signal)
       if (!labels.length) setAiError("L'IA n'a rien proposé. Nomme les exercices à la main.")
       else setAiProposals(labels)
     } catch (e) {
@@ -605,7 +608,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
               <label className={c.field}>Précision, facultative ({CUE_MAX} caractères au plus)
                 <input value={sel.cue} maxLength={CUE_MAX} onChange={(e) => patch(sel.id, { cue: clampCue(e.target.value) })} placeholder="Assise, dos droit" />
               </label>
-              <p className={ui.hint} style={{ margin: 0 }}>La voix dira : « Ensuite : {sel.name.trim() || 'sans nom'}, {Math.round(durationOf(sel))} secondes.{sel.cue ? ` ${sel.cue}` : ''} »</p>
+              <p className={ui.hint} style={{ margin: 0 }}>La voix dira : « {speechFor({ name: sel.name.trim() || (lang === 'en' ? 'no name' : 'sans nom'), cue: sel.cue, durationSec: Math.round(durationOf(sel)) }, lang)} »</p>
               <div className={c.tags} role="group" aria-label="Zone du corps">
                 {TAGS.map((t) => {
                   const on = sel.tags.includes(t)

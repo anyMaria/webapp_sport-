@@ -40,11 +40,12 @@ export async function playBeep(volume: number, kind: BeepKind | { freq: number; 
   osc.stop(t + durationSec + 0.02)
 }
 
-export function speak(text: string, voiceName?: string): void {
+/** Dit une phrase. La voix choisie n'est utilisée que si elle parle la bonne langue ; sinon, la voix par défaut de cette langue. */
+export function speak(text: string, voiceName?: string, lang: 'fr' | 'en' = 'fr'): void {
   if (!('speechSynthesis' in window)) return
   const u = new SpeechSynthesisUtterance(text)
-  const voice = speechSynthesis.getVoices().find((v) => v.name === voiceName)
-  u.lang = voice?.lang ?? 'fr-FR'
+  const voice = speechSynthesis.getVoices().find((v) => v.name === voiceName && v.lang.toLowerCase().startsWith(lang))
+  u.lang = voice?.lang ?? (lang === 'en' ? 'en-US' : 'fr-FR')
   if (voice) u.voice = voice
   speechSynthesis.cancel()
   speechSynthesis.speak(u)

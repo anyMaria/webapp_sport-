@@ -75,7 +75,7 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
   const logged = useRef(false)
 
   useEffect(() => {
-    init({ items: plan.items, countdownSec: settings.countdownSec, extendSec: settings.extendSec })
+    init({ items: plan.items, countdownSec: settings.countdownSec, extendSec: settings.extendSec, voiceLang: settings.voiceLang })
     // Une seule initialisation : changer le décompte en cours de séance n'affecte pas la séance démarrée.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan])
@@ -88,7 +88,7 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
     const st = settingsRef.current
     for (const e of effects) {
       if (e.type === 'beep' && modeHasBeeps(st.audioMode)) void playBeep(st.beepVolume, e.kind)
-      if (e.type === 'speak' && modeHasVoice(st.audioMode)) speak(e.text, st.voiceName)
+      if (e.type === 'speak' && modeHasVoice(st.audioMode)) speak(e.text, st.voiceName, st.voiceLang)
     }
   }, [])
   const send = useCallback((e: Parameters<typeof dispatch>[0]) => run(dispatch(e)), [dispatch, run])

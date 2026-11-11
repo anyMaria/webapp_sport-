@@ -40,6 +40,13 @@ describe('api/ai avec un service', () => {
     expect(t.chats()[0]!.body).toMatchObject({ model: 'meta-llama/llama-4-scout-17b-16e-instruct', response_format: { type: 'json_object' } })
   })
 
+  it('noms en anglais quand l\'app le demande', async () => {
+    let prompt = ''
+    const t = await setup({ GROCK_API: 'gsk_abc' }, (b) => { prompt = JSON.stringify(b); return { status: 200, body: GOOD } })
+    await t.call('POST', { ...marks, lang: 'en' })
+    expect(prompt).toContain('in English')
+  })
+
   it('Groq passe avant Gemini quand les deux clés existent ; AI_PROVIDER=gemini inverse', async () => {
     const a = await setup({ GROCK_API: 'gsk_abc', GEMINI_API_KEY: 'AIzaXYZ' }, () => ({ status: 200, body: GOOD }))
     expect((await a.call('GET')).json).toMatchObject({ provider: 'Groq' })

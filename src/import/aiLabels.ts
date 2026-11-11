@@ -38,12 +38,12 @@ export async function extractFrames(file: Blob, segs: Segment[], signal: AbortSi
 /** Au plus 5 bandes par requête (certains services limitent le nombre d'images). */
 const BATCH = 5
 
-export async function requestLabels(strips: Record<string, string>, signal: AbortSignal): Promise<Label[]> {
+export async function requestLabels(strips: Record<string, string>, lang: 'fr' | 'en', signal: AbortSignal): Promise<Label[]> {
   const entries = Object.entries(strips)
   const all: Label[] = []
   for (let i = 0; i < entries.length; i += BATCH) {
     const part = entries.slice(i, i + BATCH).map(([id, image]) => ({ id, image }))
-    const body = await aiPost<{ labels?: Label[] }>({ task: 'labels', segments: part }, signal)
+    const body = await aiPost<{ labels?: Label[] }>({ task: 'labels', segments: part, lang }, signal)
     all.push(...(body.labels ?? []))
   }
   return all

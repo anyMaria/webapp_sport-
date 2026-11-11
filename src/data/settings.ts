@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS: Settings = {
   countdownSec: 5,
   extendSec: 30,
   beepVolume: 0.6,
+  voiceLang: 'en',
   userName: '',
   reminder: true,
   expressFallback: true,

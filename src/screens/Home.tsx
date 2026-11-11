@@ -8,7 +8,7 @@ import { formatDuration, workoutDurationSec } from '../library/workouts'
 import { composeExpress } from '../motivation/express'
 import { remainingThisWeek, weekDays } from '../motivation/streak'
 import { streakMessage, useMotivation } from '../motivation/useMotivation'
-import type { Exercise, VideoSource, Workout } from '../data/types'
+import { originText, type Exercise, type VideoSource, type Workout } from '../data/types'
 import { APP_NAME } from '../lib/constants'
 import h from './home.module.css'
 
@@ -46,7 +46,7 @@ export function Home() {
   const days = weekDays(result.current, now, settings.slot.days)
   const pct = Math.min(100, Math.round((result.current.count / settings.weeklyGoal) * 100))
 
-  const originsOf = (w: Workout) => [...new Set(w.items.map((i) => srcById.get(exById.get(i.exerciseId)?.sourceId ?? '')?.originLabel).filter(Boolean))] as string[]
+  const originsOf = (w: Workout) => [...new Set(w.items.map((i) => { const src = srcById.get(exById.get(i.exerciseId)?.sourceId ?? ''); return src ? originText(src) : undefined }).filter(Boolean))] as string[]
 
   return (
     <main className={h.page}>

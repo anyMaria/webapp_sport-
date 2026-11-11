@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, loadSettings, saveSettings } from '../data/db'
 import { DEFAULT_SETTINGS } from '../data/settings'
+import { originText } from '../data/types'
 import { BackupError, exportBackup, parseBackup, restoreBackup, type BackupFile } from '../data/backup'
 import { deleteSourceRecords, workoutsUsingSource } from '../data/sources'
 import { formatBytes, readStorageInfo, removeVideoFile, requestPersist, type StorageInfo } from '../data/opfs'
@@ -163,7 +164,7 @@ export function Settings() {
           <Card title="Mes vidéos">
             {sources.length === 0 && <p className={s.empty}>Aucune vidéo importée pour l'instant.</p>}
             {sources.map((src) => (
-              <Row key={src.id} label={src.title} hint={`${src.originLabel}${src.sizeBytes ? ` · ${formatBytes(src.sizeBytes)}` : ''}`}>
+              <Row key={src.id} label={src.title} hint={`${originText(src)}${src.sizeBytes ? ` · ${formatBytes(src.sizeBytes)}` : ''}`}>
                 <Button variant="danger" onClick={() => void askDelete(src.id, src.title)}>Supprimer</Button>
               </Row>
             ))}

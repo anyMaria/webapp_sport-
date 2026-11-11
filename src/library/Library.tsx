@@ -100,6 +100,7 @@ export function Library() {
               <Thumb id={e.thumbId} youtubeId={srcYt.get(e.sourceId)} className={c.exThumb} />
               <div className={c.exMain}>
                 <input className={c.exName} value={e.name} aria-label={`Nom de l'exercice ${e.name}`} onChange={(ev) => void db.exercises.update(e.id, { name: ev.target.value })} />
+                <span className={c.meta}>Dit à voix haute : « {e.name} »{e.cue ? ` puis « ${e.cue} »` : ''}</span>
                 <span className={c.meta}>{srcName.get(e.sourceId) ?? 'Vidéo supprimée'} · {formatTime(e.startSec)} – {formatTime(e.endSec)}{e.tags.length ? ` · ${e.tags.join(', ')}` : ''}</span>
               </div>
               <Button variant="danger" className={c.small} onClick={() => setConfirm({ kind: 'exercise', id: e.id, name: e.name })}>Supprimer</Button>

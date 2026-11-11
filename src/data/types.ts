@@ -5,7 +5,8 @@ export interface VideoSource {
   kind: SourceKind
   title: string
   durationSec: number
-  originLabel: 'TikTok' | 'YouTube' | 'Autre' // affichage seulement
+  originLabel: 'TikTok' | 'Instagram' | 'YouTube' | 'Autre' // affichage seulement
+  originNote?: string     // précision libre quand originLabel = "Autre"
   opfsPath?: string // kind = "file"
   sizeBytes?: number // kind = "file"
   youtubeId?: string // kind = "youtube"
@@ -87,3 +88,6 @@ export interface Thumb {
   id: string
   blob: Blob
 }
+
+/** Texte affiché pour l'origine d'une vidéo : la précision saisie si elle existe. */
+export const originText = (s: Pick<VideoSource, 'originLabel' | 'originNote'>) => (s.originLabel === 'Autre' && s.originNote ? s.originNote : s.originLabel)

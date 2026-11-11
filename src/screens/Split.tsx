@@ -373,7 +373,8 @@ function SplitEditor({ source }: { source: VideoSource }) {
           {sel && (
             <div className={c.card}>
               <span className={c.label}>Consigne et zone du corps</span>
-              <label className={c.field}>Consigne (lue par la voix, {CUE_MAX} caractères au plus)
+              <p className={ui.hint} style={{ margin: 0 }}>Dit à voix haute : « Ensuite : {sel.name.trim() || 'sans nom'}, {Math.round(durationOf(sel))} secondes.{sel.cue ? ` ${sel.cue}` : ''} »</p>
+              <label className={c.field}>Précision, facultative (dite après le nom, {CUE_MAX} caractères au plus)
                 <input value={sel.cue} maxLength={CUE_MAX} onChange={(e) => patch(sel.id, { cue: clampCue(e.target.value) })} placeholder="Assise, dos droit" />
               </label>
               <div className={c.tags} role="group" aria-label="Zone du corps">

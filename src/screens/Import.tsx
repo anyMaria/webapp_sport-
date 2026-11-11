@@ -11,12 +11,14 @@ import { removeVideoFile, formatBytes } from '../data/opfs'
 import { parseYouTubeId } from '../video/youtube'
 import { saveSegments } from '../import/saveExercises'
 import { formatTime, wholeVideo } from '../import/segments'
-import type { VideoSource } from '../data/types'
+import { originText, type VideoSource } from '../data/types'
+import ui from '../ui/ui.module.css'
 import s from '../app/app.module.css'
 import c from './importScreen.module.css'
 
 const SHORT_SEC = 90
 type Origin = VideoSource['originLabel']
+type Slot = 'social' | 'YouTube' | 'Autre'
 
 /** Titre modifiable : s'enregistre en quittant le champ ou avec Entrée. */
 function NameField({ source }: { source: VideoSource }) {
@@ -41,8 +43,10 @@ function NameField({ source }: { source: VideoSource }) {
 /** Import : trois sources (TikTok, YouTube, autre). Les vidéos importées s'affichent juste en dessous. */
 export function Import() {
   const nav = useNavigate()
-  const inputs = useRef<Record<Origin, HTMLInputElement | null>>({ TikTok: null, YouTube: null, Autre: null })
+  const inputs = useRef<Record<Slot, HTMLInputElement | null>>({ social: null, YouTube: null, Autre: null })
   const listTop = useRef<HTMLDivElement>(null)
+  const [social, setSocial] = useState<'TikTok' | 'Instagram'>('TikTok')
+  const [otherName, setOtherName] = useState('')
   const [current, setCurrent] = useState<{ name: string; ratio: number; origin: Origin } | null>(null)
   const [fresh, setFresh] = useState<string[]>([])
   const [info, setInfo] = useState<string | null>(null)
@@ -60,7 +64,7 @@ export function Import() {
   }, []) ?? {}
   const sorted = [...sources].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
-  const importFiles = async (files: FileList | null, origin: Origin) => {
+  const importFiles = async (files: FileList | null, slot: Slot, origin: Origin, note?: string) => {
     if (!files?.length) return
     setErrors([])
     setInfo(null)
@@ -69,7 +73,7 @@ export function Import() {
     for (const file of Array.from(files)) {
       setCurrent({ name: file.name, ratio: 0, origin })
       try {
-        const source = await importVideoFile(file, origin, (ratio) => setCurrent({ name: file.name, ratio, origin }))
+        const source = await importVideoFile(file, origin, (ratio) => setCurrent({ name: file.name, ratio, origin }), note)
         added.push(source.id)
         ok++
       } catch (e) {
@@ -77,7 +81,7 @@ export function Import() {
       }
     }
     setCurrent(null)
-    const input = inputs.current[origin]
+    const input = inputs.current[slot]
     if (input) input.value = ''
     if (ok) {
       setFresh((f) => [...added, ...f])
@@ -114,19 +118,24 @@ export function Import() {
     setToDelete(null)
   }
 
-  const fileButton = (origin: Origin, label: string, primary = false) => (
+  const fileButton = (slot: Slot, origin: Origin, label: string, primary = false, note?: string) => (
     <>
-      <Button variant={primary ? 'primary' : 'secondary'} disabled={!!current} onClick={() => inputs.current[origin]?.click()}>{label}</Button>
-      <input ref={(el) => { inputs.current[origin] = el }} type="file" accept="video/*" multiple hidden aria-label={`${label} (${origin})`} onChange={(e) => void importFiles(e.target.files, origin)} />
+      <Button variant={primary ? 'primary' : 'secondary'} disabled={!!current} onClick={() => inputs.current[slot]?.click()}>{label}</Button>
+      <input ref={(el) => { inputs.current[slot] = el }} type="file" accept="video/*" multiple hidden aria-label={`${label} (${origin})`} onChange={(e) => void importFiles(e.target.files, slot, origin, note)} />
     </>
   )
 
   return (
     <Screen title="Importer une vidéo" subtitle="Choisis d'où vient ta vidéo. Les fichiers restent sur cet iPad.">
       <div className={c.sources}>
-        <Card title="TikTok">
-          <p className={s.empty}>TikTok ne permet pas de lire un lien dans une autre app. Enregistre d'abord la vidéo dans Photos, puis choisis le fichier ici.</p>
-          <div className={s.actions}>{fileButton('TikTok', 'Choisir des fichiers', true)}</div>
+        <Card title="Réseaux sociaux">
+          <div className={s.actions} role="group" aria-label="Réseau social">
+            {(['TikTok', 'Instagram'] as const).map((o) => (
+              <Button key={o} aria-pressed={social === o} className={social === o ? ui.primary : ''} onClick={() => setSocial(o)}>{o}</Button>
+            ))}
+          </div>
+          <p className={s.empty}>Un lien {social} ne se lit pas dans une autre app. Enregistre d'abord la vidéo dans Photos, puis choisis le fichier ici.</p>
+          <div className={s.actions}>{fileButton('social', social, 'Choisir des fichiers', true)}</div>
         </Card>
 
         <Card title="YouTube">
@@ -142,13 +151,15 @@ export function Import() {
           {linkError && <p role="alert" className={[s.msg, s.msgErr].join(' ')}>{linkError}</p>}
           <div className={s.actions}>
             <Button variant="primary" onClick={() => void addYouTube()} disabled={!link.trim()}>Ajouter le lien</Button>
-            {fileButton('YouTube', 'Choisir des fichiers')}
+            {fileButton('YouTube', 'YouTube', 'Choisir des fichiers')}
           </div>
         </Card>
 
         <Card title="Autre">
-          <p className={s.empty}>Une vidéo qui vient d'ailleurs : Instagram, ton téléphone, une caméra.</p>
-          <div className={s.actions}>{fileButton('Autre', 'Choisir des fichiers')}</div>
+          <label className={c.field}>Quelle source ?
+            <input value={otherName} onChange={(e) => setOtherName(e.target.value)} placeholder="Ex. coach, caméra, Facebook" />
+          </label>
+          <div className={s.actions}>{fileButton('Autre', 'Autre', 'Choisir des fichiers', false, otherName)}</div>
         </Card>
       </div>
 
@@ -169,7 +180,7 @@ export function Import() {
               const n = counts[src.id] ?? 0
               const short = src.kind === 'file' && src.durationSec < SHORT_SEC
               const isFresh = fresh.includes(src.id)
-              const meta = [src.originLabel, src.durationSec ? formatTime(src.durationSec) : null, src.kind === 'file' ? formatBytes(src.sizeBytes ?? 0) : 'lien YouTube'].filter(Boolean).join(' · ')
+              const meta = [originText(src), src.durationSec ? formatTime(src.durationSec) : null, src.kind === 'file' ? formatBytes(src.sizeBytes ?? 0) : 'lien YouTube'].filter(Boolean).join(' · ')
               return (
                 <div key={src.id} className={[c.item, isFresh ? c.fresh : ''].join(' ')}>
                   <div className={c.itemHead}>

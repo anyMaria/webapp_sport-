@@ -48,7 +48,7 @@ export function makeThumb(file: Blob, atSec: number): Promise<Blob> {
 }
 
 /** Importe un fichier vidéo : copie dans OPFS (avec progression) puis crée la source. En cas d'échec, rien ne reste. */
-export async function importVideoFile(file: File, originLabel: VideoSource['originLabel'], onProgress?: (ratio: number) => void): Promise<VideoSource> {
+export async function importVideoFile(file: File, originLabel: VideoSource['originLabel'], onProgress?: (ratio: number) => void, originNote?: string): Promise<VideoSource> {
   await assertSpaceFor(file.size)
   const meta = await probeVideo(file)
   const id = newId()
@@ -62,7 +62,7 @@ export async function importVideoFile(file: File, originLabel: VideoSource['orig
   }
   const source: VideoSource = {
     id, kind: 'file', title: file.name.replace(/\.[^.]+$/, ''), durationSec: meta.durationSec,
-    originLabel, opfsPath, sizeBytes: file.size, createdAt: new Date().toISOString(),
+    originLabel, originNote: originNote?.trim() || undefined, opfsPath, sizeBytes: file.size, createdAt: new Date().toISOString(),
   }
   await db.sources.put(source)
   return source

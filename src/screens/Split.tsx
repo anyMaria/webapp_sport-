@@ -19,7 +19,7 @@ import { Timeline } from '../import/Timeline'
 import { Stepper } from '../ui/Stepper'
 import { analyzeVideo } from '../import/detect/analyze'
 import { getVideoFile } from '../data/opfs'
-import { aiSegmentsEnabled, buildSegments, requestSegments, sampleFrames } from '../import/aiSegments'
+import { aiSegmentsEnabled, buildSegments, requestSegments, sampleSheets } from '../import/aiSegments'
 import { aiLabelsEnabled, extractFrames, requestLabels, type Label } from '../import/aiLabels'
 import { Button, IconButton } from '../ui/Button'
 import ui from '../ui/ui.module.css'
@@ -254,9 +254,9 @@ function SplitEditor({ source }: { source: VideoSource }) {
     setProgress({ label: 'Images de la vidéo', ratio: 0 })
     try {
       const file = await getVideoFile(source.opfsPath)
-      const frames = await sampleFrames(file, source.durationSec, ctl.signal, (ratio) => setProgress({ label: 'Images de la vidéo', ratio }))
+      const sheets = await sampleSheets(file, source.durationSec, ctl.signal, (ratio) => setProgress({ label: 'Images de la vidéo', ratio }))
       setProgress({ label: 'Réflexion de l\'IA', ratio: null })
-      const found = await requestSegments(frames, source.durationSec, ctl.signal)
+      const found = await requestSegments(sheets, source.durationSec, ctl.signal)
       const next = buildSegments(found, source.durationSec)
       if (!next.some((x) => x.kept)) setNotes(["L'IA n'a repéré aucun exercice. Coupe à la main."])
       else {
@@ -516,8 +516,8 @@ function SplitEditor({ source }: { source: VideoSource }) {
               <p className={ui.hint} style={{ margin: 0 }}>Propose des coupes automatiquement. À vérifier : corrige ensuite à la main.</p>
               {aiSegOn && !progress && (
                 aiSegConfirm ? (
-                  <div role="alertdialog" aria-label="Envoyer des images à Grok" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <p className={s.msg}>Une soixantaine d'images de cette vidéo vont quitter l'iPad pour être envoyées à Grok (xAI). Ce service peut être payant à l'usage.</p>
+                  <div role="alertdialog" aria-label="Envoyer des images au service d'IA" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <p className={s.msg}>Une soixantaine d'images de cette vidéo vont quitter l'iPad pour être envoyées à un service d'IA (Groq ou xAI). Il peut être payant à l'usage.</p>
                     <div className={s.actions}><Button variant="primary" onClick={() => void runAiSegments()}>Envoyer les images</Button><Button onClick={() => setAiSegConfirm(false)}>Annuler</Button></div>
                   </div>
                 ) : (

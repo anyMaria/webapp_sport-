@@ -21,6 +21,7 @@ describe('découpe par IA', () => {
   it('nombre d\'images borné', () => {
     expect(frameCount(10)).toBe(8)
     expect(frameCount(300)).toBe(60)
+    expect(frameCount(100000)).toBe(60)
     expect(frameCount(90)).toBe(30)
   })
 })

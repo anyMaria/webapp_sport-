@@ -1,3 +1,4 @@
 {
-  "rewrites": [{ "source": "/((?!assets/|.*\\..*).*)", "destination": "/index.html" }]
+  "functions": { "api/ai.ts": { "maxDuration": 60 } },
+  "rewrites": [{ "source": "/((?!assets/|api/|.*\\..*).*)", "destination": "/index.html" }]
 }

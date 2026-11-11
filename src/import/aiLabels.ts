@@ -1,59 +1,50 @@
-import { FRAME_W } from './detect/shots'
+import { aiPost, aiStatus, drawTag, openHiddenVideo, seekVideo } from './aiClient'
 import type { Segment } from './segments'
 
 export interface Label { id: string; name: string; cue: string }
 
-/** Le bouton n'apparaît que si la fonction serveur a une clé et un modèle configurés. */
 export async function aiLabelsEnabled(): Promise<boolean> {
-  try {
-    const r = await fetch('/api/label-segments')
-    if (!r.ok) return false
-    return ((await r.json()) as { enabled?: boolean }).enabled === true
-  } catch {
-    return false
-  }
+  return (await aiStatus()).enabled
 }
 
-/** 2 ou 3 images réduites (512 px de large, JPEG) par segment, prises dans un élément vidéo caché. */
-export async function extractFrames(file: Blob, segs: Segment[], signal: AbortSignal): Promise<Record<string, string[]>> {
-  void FRAME_W
-  const url = URL.createObjectURL(file)
-  const v = document.createElement('video')
-  v.muted = true
-  v.playsInline = true
-  v.preload = 'auto'
+/** Une bande par segment : trois moments côte à côte (256 px chacun), JPEG, sans l'en-tête « data: ». */
+export async function extractFrames(file: Blob, segs: Segment[], signal: AbortSignal): Promise<Record<string, string>> {
+  const { v, done } = await openHiddenVideo(file)
   try {
-    await new Promise<void>((res, rej) => { v.onloadeddata = () => res(); v.onerror = () => rej(new Error('Vidéo illisible')); v.src = url })
-    const out: Record<string, string[]> = {}
-    const w = 512
+    const w = 256
     const h = Math.round((w * (v.videoHeight || 9)) / (v.videoWidth || 16))
     const cv = document.createElement('canvas')
-    cv.width = w
+    cv.width = 3 * w
     cv.height = h
     const g = cv.getContext('2d')!
+    const out: Record<string, string> = {}
     for (const s of segs) {
       const len = s.endSec - s.startSec
-      const times = len < 6 ? [s.startSec + len / 2] : [s.startSec + len * 0.2, s.startSec + len * 0.5, s.startSec + len * 0.8]
-      out[s.id] = []
-      for (const t of times) {
+      const times = [s.startSec + len * 0.2, s.startSec + len * 0.5, s.startSec + len * 0.8]
+      for (let i = 0; i < 3; i++) {
         if (signal.aborted) throw new DOMException('Annulé', 'AbortError')
-        await new Promise<void>((res) => { v.onseeked = () => res(); v.currentTime = t })
-        g.drawImage(v, 0, 0, w, h)
-        out[s.id]!.push(cv.toDataURL('image/jpeg', 0.7).split(',')[1]!)
+        await seekVideo(v, times[i]!)
+        g.drawImage(v, i * w, 0, w, h)
+        drawTag(g, String(i + 1), i * w + 4, 4)
       }
+      out[s.id] = cv.toDataURL('image/jpeg', 0.7).split(',')[1]!
     }
     return out
   } finally {
-    URL.revokeObjectURL(url)
+    done()
   }
 }
 
-export async function requestLabels(frames: Record<string, string[]>, signal: AbortSignal): Promise<Label[]> {
-  const r = await fetch('/api/label-segments', {
-    method: 'POST', signal, headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ segments: Object.entries(frames).map(([id, images]) => ({ id, images })) }),
-  })
-  const body = (await r.json().catch(() => ({}))) as { labels?: Label[]; error?: string }
-  if (!r.ok) throw new Error(body.error ?? "Le nommage par IA a échoué.")
-  return body.labels ?? []
+/** Au plus 5 bandes par requête (certains services limitent le nombre d'images). */
+const BATCH = 5
+
+export async function requestLabels(strips: Record<string, string>, signal: AbortSignal): Promise<Label[]> {
+  const entries = Object.entries(strips)
+  const all: Label[] = []
+  for (let i = 0; i < entries.length; i += BATCH) {
+    const part = entries.slice(i, i + BATCH).map(([id, image]) => ({ id, image }))
+    const body = await aiPost<{ labels?: Label[] }>({ task: 'labels', segments: part }, signal)
+    all.push(...(body.labels ?? []))
+  }
+  return all
 }

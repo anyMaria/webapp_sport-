@@ -1,59 +1,67 @@
+import { aiPost, aiStatus, drawTag, openHiddenVideo, seekVideo } from './aiClient'
 import { clampCue, defaultName, MIN_SEGMENT_SEC, segId, type Segment } from './segments'
 
 export interface Found { start: number; end: number; name: string; cue: string }
-export interface Frame { t: number; image: string }
+/** Une planche : une grille d'images de la vidéo, avec l'instant de chacune. */
+export interface Sheet { image: string; times: number[] }
 
-/** Le bouton n'apparaît que si la fonction serveur a une clé et un modèle configurés. */
 export async function aiSegmentsEnabled(): Promise<boolean> {
-  try {
-    const r = await fetch('/api/ai-segments')
-    return r.ok && ((await r.json()) as { enabled?: boolean }).enabled === true
-  } catch {
-    return false
-  }
+  return (await aiStatus()).enabled
 }
 
-/** Nombre d'images envoyées : une toutes les 3 s environ, entre 8 et 60. */
-export const frameCount = (durationSec: number) => Math.min(60, Math.max(8, Math.floor(durationSec / 3)))
+const COLS = 4
+const ROWS = 3
+const PER_SHEET = COLS * ROWS
+/** Au plus 5 planches (certains services limitent le nombre d'images) : 60 images, une toutes les 3 s environ. */
+export const MAX_FRAMES = 5 * PER_SHEET
+export const frameCount = (durationSec: number) => Math.min(MAX_FRAMES, Math.max(8, Math.floor(durationSec / 3)))
 
-/** Images réduites (320 px de large, JPEG) prises à intervalles réguliers, dans un élément vidéo caché. */
-export async function sampleFrames(file: Blob, durationSec: number, signal: AbortSignal, onProgress: (ratio: number) => void): Promise<Frame[]> {
-  const url = URL.createObjectURL(file)
-  const v = document.createElement('video')
-  v.muted = true
-  v.playsInline = true
-  v.preload = 'auto'
+/** Planches d'images (grille de 4 x 3, 320 px par image, JPEG), l'instant écrit sur chaque image. */
+export async function sampleSheets(file: Blob, durationSec: number, signal: AbortSignal, onProgress: (ratio: number) => void): Promise<Sheet[]> {
+  const { v, done } = await openHiddenVideo(file)
   try {
-    await new Promise<void>((res, rej) => { v.onloadeddata = () => res(); v.onerror = () => rej(new Error('Vidéo illisible')); v.src = url })
     const w = 320
     const h = Math.round((w * (v.videoHeight || 9)) / (v.videoWidth || 16))
-    const cv = document.createElement('canvas')
-    cv.width = w
-    cv.height = h
-    const g = cv.getContext('2d')!
     const n = frameCount(durationSec)
-    const out: Frame[] = []
+    const sheets: Sheet[] = []
+    let cv: HTMLCanvasElement | null = null
+    let g: CanvasRenderingContext2D | null = null
+    let times: number[] = []
+    const flush = () => {
+      if (cv && times.length) sheets.push({ image: cv.toDataURL('image/jpeg', 0.7).split(',')[1]!, times })
+      cv = null
+      times = []
+    }
     for (let i = 0; i < n; i++) {
       if (signal.aborted) throw new DOMException('Annulé', 'AbortError')
+      if (!cv) {
+        cv = document.createElement('canvas')
+        cv.width = COLS * w
+        cv.height = ROWS * h
+        g = cv.getContext('2d')!
+        g.fillStyle = '#000'
+        g.fillRect(0, 0, cv.width, cv.height)
+      }
       const t = Math.min(durationSec - 0.1, ((i + 0.5) * durationSec) / n)
-      await new Promise<void>((res) => { v.onseeked = () => res(); v.currentTime = t })
-      g.drawImage(v, 0, 0, w, h)
-      out.push({ t, image: cv.toDataURL('image/jpeg', 0.6).split(',')[1]! })
+      await seekVideo(v, t)
+      const slot = times.length
+      const x = (slot % COLS) * w
+      const y = Math.floor(slot / COLS) * h
+      g!.drawImage(v, x, y, w, h)
+      drawTag(g!, `${Math.round(t)} s`, x + 4, y + 4)
+      times.push(t)
+      if (times.length === PER_SHEET) flush()
       onProgress((i + 1) / n)
     }
-    return out
+    flush()
+    return sheets
   } finally {
-    URL.revokeObjectURL(url)
+    done()
   }
 }
 
-export async function requestSegments(frames: Frame[], durationSec: number, signal: AbortSignal): Promise<Found[]> {
-  const r = await fetch('/api/ai-segments', {
-    method: 'POST', signal, headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ frames, duration: durationSec }),
-  })
-  const body = (await r.json().catch(() => ({}))) as { exercises?: Found[]; error?: string }
-  if (!r.ok) throw new Error(body.error ?? 'La découpe par IA a échoué.')
+export async function requestSegments(sheets: Sheet[], durationSec: number, signal: AbortSignal): Promise<Found[]> {
+  const body = await aiPost<{ exercises?: Found[] }>({ task: 'segments', sheets, duration: durationSec }, signal)
   return body.exercises ?? []
 }
 

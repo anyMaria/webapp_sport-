@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronLeft, ChevronRight, Pause, Play, Sparkles } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pause, Play, Sparkles, Volume2 } from 'lucide-react'
 import { db, loadSettings } from '../data/db'
 import type { VideoSource } from '../data/types'
 import { useOpfsUrl } from '../video/useOpfsUrl'
@@ -13,6 +13,7 @@ import { inVideoOrder } from '../library/workouts'
 import { customEquipment } from '../library/equipment'
 import { EquipmentPicker } from '../library/EquipmentPicker'
 import { speechFor } from '../engine/session'
+import { speak } from '../audio/beep'
 import { aiStatus, type AiStatus } from '../import/aiClient'
 import { extractFrames, requestLabels } from '../import/aiLabels'
 import { getVideoFile } from '../data/opfs'
@@ -68,7 +69,8 @@ function NamingEditor({ source, initial, saved }: { source: VideoSource; initial
   const [saving, setSaving] = useState(false)
   const [equipment, setEquipment] = useState<string[]>(source.equipment ?? [])
   const knownEquipment = customEquipment(useLiveQuery(() => db.sources.toArray(), [])?.map((x) => x.equipment) ?? [])
-  const lang = useLiveQuery(() => loadSettings(), [])?.voiceLang ?? 'en'
+  const settings = useLiveQuery(() => loadSettings(), [])
+  const lang = settings?.voiceLang ?? 'en'
   const [aiInfo, setAiInfo] = useState<AiStatus | null>(null)
   const [aiBusy, setAiBusy] = useState(false)
   const [aiMsg, setAiMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -110,6 +112,8 @@ function NamingEditor({ source, initial, saved }: { source: VideoSource; initial
   const keptNo = kept.findIndex((x) => x.id === sel.id)
   const visIndex = visible.findIndex((x) => x.id === sel.id)
   const toName = kept.filter((x) => isDefaultName(x.name)).length
+  /** Phrase que dira la voix en séance avant cet exercice (la durée réelle dépendra de la séance). */
+  const spoken = speechFor({ name: sel.name.trim() || defaultName(keptNo), cue: sel.cue, durationSec: Math.round(durationOf(sel)) }, lang)
 
   // La ligne sélectionnée reste visible dans la liste (défilement de la liste seulement, jamais de la page).
   useEffect(() => {
@@ -238,7 +242,10 @@ function NamingEditor({ source, initial, saved }: { source: VideoSource; initial
                   return <button key={t} type="button" aria-pressed={on} className={[n.tag, on ? n.tagOn : ''].join(' ')} onClick={() => patch(sel.id, { tags: on ? sel.tags.filter((x) => x !== t) : [...sel.tags, t] })}>{t}</button>
                 })}
               </div>
-              <p className={ui.hint} style={{ margin: 0 }}>La voix dira : « {speechFor({ name: sel.name.trim() || defaultName(keptNo), cue: sel.cue, durationSec: Math.round(durationOf(sel)) }, lang)} »</p>
+              <div className={n.voice}>
+                <p className={ui.hint} style={{ margin: 0, flex: 1 }}>La voix dira : « {spoken} »</p>
+                <Button onClick={() => speak(spoken, settings?.voiceName, lang)} aria-label="Écouter la phrase que dira la voix"><Volume2 size={20} aria-hidden="true" />Écouter</Button>
+              </div>
             </>
           ) : (
             <p className={ui.hint} style={{ margin: 0 }}>Cette partie est retirée : elle ne sera pas enregistrée. Si c'est un exercice, garde-la pour pouvoir la nommer.</p>

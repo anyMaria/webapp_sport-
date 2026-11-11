@@ -13,6 +13,7 @@ import { streakMessage, useMotivation } from '../motivation/useMotivation'
 import { originText, type Exercise, type VideoSource, type Workout } from '../data/types'
 import { APP_NAME } from '../lib/constants'
 import { useVideoStats } from '../data/useVideoStats'
+import { equipmentText } from '../library/equipment'
 import h from './home.module.css'
 
 const DAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
@@ -119,6 +120,7 @@ export function Home() {
               <span className={h.eyebrow}>Séance du jour{slotToday ? ` · créneau de ${hhmm(settings.slot.time)}` : ''}</span>
               <h2>{today?.name}</h2>
               <span className={h.todayMeta}>{today ? `${formatDuration(workoutDurationSec(today.items))} · ${today.items.length} exercices` : ''}</span>
+              {today?.equipment?.length ? <span className={h.todayMeta} style={{ display: 'block', fontWeight: 600 }}>{equipmentText(today.equipment)}</span> : null}
             </div>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <button className={h.start} onClick={() => today && nav(`/seance/${today.id}`)}><Play size={22} fill="currentColor" aria-hidden="true" />Commencer</button>
@@ -195,6 +197,7 @@ export function Home() {
                   <div>
                     <div className={h.cardName}>{w.name}</div>
                     <span className={h.hint}>{formatDuration(workoutDurationSec(w.items))} · {w.items.length} exercices</span>
+                    {w.equipment?.length ? <span className={h.hint} style={{ display: 'block' }}>{equipmentText(w.equipment)}</span> : null}
                   </div>
                   <button className={h.play} aria-label={`Lancer ${w.name}`} onClick={() => nav(`/seance/${w.id}`)}><Play size={20} fill="currentColor" aria-hidden="true" /></button>
                 </div>

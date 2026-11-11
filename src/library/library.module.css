@@ -33,3 +33,5 @@
 .stepCap { font-size: 13px; font-weight: 600; color: var(--text-muted); padding-left: 4px; }
 /* Le bouton d'enregistrement reste visible en bas de l'écran, même avec une longue séance. */
 .saveBar { position: sticky; bottom: 0; padding: 12px 0; background: var(--bg); z-index: 1; }
+.otherRow { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.field input { color: var(--text); }

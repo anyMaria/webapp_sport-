@@ -18,6 +18,7 @@ export interface Plan {
   /** Éléments sautés car l'exercice ou la vidéo n'existe plus. */
   missing: number
   isExpress: boolean
+  equipment: string[]
 }
 
 /** Transforme une séance enregistrée en liste jouable. Un exercice supprimé est sauté et signalé. */
@@ -42,5 +43,5 @@ export async function buildPlan(workoutId: string, express = false): Promise<Pla
     else if (src.kind === 'youtube' && src.youtubeId) clips.push({ kind: 'youtube', youtubeId: src.youtubeId, startSec: ex.startSec, endSec: ex.endSec })
     else clips.push({ kind: 'missing', startSec: ex.startSec, endSec: ex.endSec })
   }
-  return { workoutId: w.id, name: w.name, items, clips, thumbIds, thumbYt, missing, isExpress: w.isExpress || express }
+  return { workoutId: w.id, name: w.name, items, clips, thumbIds, thumbYt, missing, isExpress: w.isExpress || express, equipment: w.equipment ?? [] }
 }

@@ -103,7 +103,7 @@ export function Settings() {
               <input className={ui.range} type="range" min={0} max={1} step={0.05} value={settings.beepVolume} aria-label="Volume des bips" onChange={(e) => void saveSettings({ beepVolume: Number(e.target.value) })} />
             </Row>
             <Row label="Langue des annonces" hint="Ce que la voix dit entre deux exercices. Choisis la langue de tes noms d'exercices.">
-              <div className={s.actions} role="group" aria-label="Langue des annonces">
+              <div className={s.actions} style={{ flexWrap: 'nowrap', flexShrink: 0 }} role="group" aria-label="Langue des annonces">
                 {([['en', 'English'], ['fr', 'Français']] as const).map(([v, label]) => (
                   <Button key={v} aria-pressed={settings.voiceLang === v} variant={settings.voiceLang === v ? 'primary' : 'secondary'} onClick={() => void saveSettings({ voiceLang: v, voiceName: undefined })}>{label}</Button>
                 ))}

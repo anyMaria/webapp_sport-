@@ -9,6 +9,7 @@ import { Screen } from '../app/Screen'
 import { Button, IconButton } from '../ui/Button'
 import { Stepper } from '../ui/Stepper'
 import { Thumb } from './Thumb'
+import { customEquipment, PRESETS, toggleEquipment } from './equipment'
 import { TAGS } from '../screens/Split'
 import { applyRhythm, formatDuration, inVideoOrder, itemFor, move, naturalDurationSec, removeRun, workoutDurationSec } from './workouts'
 import c from './library.module.css'
@@ -42,6 +43,10 @@ function ComposerEditor({ id, existing, preset }: { id: string; existing?: Worko
   const [name, setName] = useState(existing?.name ?? preset?.name ?? 'Nouvelle séance')
   const [items, setItems] = useState<WorkoutItem[]>(existing?.items ?? preset?.items ?? [])
   const [express, setExpress] = useState(existing?.isExpress ?? false)
+  const [equipment, setEquipment] = useState<string[]>(existing?.equipment ?? [])
+  const [otherOpen, setOtherOpen] = useState(false)
+  const [other, setOther] = useState('')
+  const otherKnown = customEquipment((useLiveQuery(() => db.workouts.toArray(), []) ?? []).map((w) => w.equipment))
   const [q, setQ] = useState('')
   const [tag, setTag] = useState('')
   const [open, setOpen] = useState('')
@@ -78,7 +83,7 @@ function ComposerEditor({ id, existing, preset }: { id: string; existing?: Worko
 
   const save = async () => {
     const now = new Date().toISOString()
-    const w: Workout = { id: existing?.id ?? newId(), name: name.trim() || 'Séance sans nom', items, isExpress: express, createdAt: existing?.createdAt ?? now, updatedAt: now }
+    const w: Workout = { id: existing?.id ?? newId(), name: name.trim() || 'Séance sans nom', items, isExpress: express, equipment, createdAt: existing?.createdAt ?? now, updatedAt: now }
     await db.workouts.put(w)
     // Une nouvelle séance : retour à l'accueil, où elle se lance. Une séance modifiée : retour à la bibliothèque.
     nav(existing ? '/bibliotheque' : '/')
@@ -136,6 +141,23 @@ function ComposerEditor({ id, existing, preset }: { id: string; existing?: Worko
 
         <section aria-label="Séance en cours de composition" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <label className={c.field}>Nom de la séance<input value={name} onChange={(e) => setName(e.target.value)} /></label>
+          <div className={c.item} role="group" aria-labelledby="equip-h">
+            <span id="equip-h" className={ui.label}>Équipement</span>
+            <div className={c.chips}>
+              {[...PRESETS, ...otherKnown, ...equipment.filter((x) => !PRESETS.includes(x as (typeof PRESETS)[number]) && !otherKnown.includes(x))].map((e) => {
+                const on = equipment.includes(e)
+                return <button key={e} type="button" aria-pressed={on} className={[c.chip, on ? c.chipOn : ''].join(' ')} onClick={() => setEquipment((l) => toggleEquipment(l, e))}>{e}</button>
+              })}
+              {!otherOpen && <button type="button" className={c.chip} onClick={() => setOtherOpen(true)}>Autre…</button>}
+            </div>
+            {otherOpen && (
+              <form className={c.otherRow} onSubmit={(e) => { e.preventDefault(); if (other.trim()) setEquipment((l) => toggleEquipment(l.filter((x) => x.toLowerCase() !== other.trim().toLowerCase()), other)); setOther(''); setOtherOpen(false) }}>
+                <label className={c.field} style={{ flex: 1 }}>Autre équipement<input autoFocus value={other} maxLength={40} onChange={(e) => setOther(e.target.value)} placeholder="Ex. tapis, haltères, chaise" /></label>
+                <Button type="submit" variant="primary" disabled={!other.trim()}>Ajouter</Button>
+                <Button onClick={() => { setOther(''); setOtherOpen(false) }}>Annuler</Button>
+              </form>
+            )}
+          </div>
           <div className={s.actions} style={{ justifyContent: 'space-between' }}>
             <span className={c.total} aria-live="polite">{formatDuration(workoutDurationSec(items))}</span>
             <Button aria-pressed={express} onClick={() => setExpress(!express)}>{express ? 'Séance express' : 'Marquer comme express'}</Button>

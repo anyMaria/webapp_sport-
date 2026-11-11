@@ -7,6 +7,7 @@ import { Screen } from '../app/Screen'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { Thumb } from './Thumb'
+import { equipmentText } from './equipment'
 import { deleteExercise, duplicateWorkout, formatDuration, inVideoOrder, workoutDurationSec } from './workouts'
 import { TAGS } from '../screens/Split'
 import { formatTime } from '../import/segments'
@@ -72,6 +73,7 @@ export function Library() {
               <div>
                 <span className={c.wname}>{w.name}</span>{w.isExpress && <span className={c.badge}>Express</span>}
                 <div className={c.meta}>{formatDuration(workoutDurationSec(w.items))} · {w.items.length} exercice{w.items.length > 1 ? 's' : ''}</div>
+                {w.equipment?.length ? <div className={c.meta}>{equipmentText(w.equipment)}</div> : null}
               </div>
               <div className={c.btnRow}>
                 <Button variant="primary" className={c.small} onClick={() => nav(`/seance/${w.id}`)}><Play size={18} fill="currentColor" aria-hidden="true" />Lancer</Button>

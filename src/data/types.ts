@@ -42,6 +42,8 @@ export interface Workout {
   name: string
   items: WorkoutItem[]
   isExpress: boolean
+  /** Ce qu'il faut sortir avant la séance : « Sans équipement », « Bandes élastiques », « Blocs de yoga » ou un texte libre. */
+  equipment?: string[]
   createdAt: string
   updatedAt: string
 }

@@ -14,6 +14,7 @@ import { LoopYT } from '../video/LoopYT'
 import { youtubeThumb } from '../video/youtube'
 import { useOpfsUrl } from '../video/useOpfsUrl'
 import { buildPlan, type Clip, type Plan } from './plan'
+import { equipmentText, NO_EQUIPMENT } from '../library/equipment'
 import { useSessionStore } from './useSessionStore'
 import { useWakeLock } from './useWakeLock'
 import { Button } from '../ui/Button'
@@ -212,6 +213,7 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
             <span className={s.eyebrow}>Séance</span>
             <h1 className={s.nextTitle} style={{ fontSize: 40 }}>{plan.name}</h1>
             <span className={s.sub}>{plan.items.length} exercices · {Math.round(plannedSec(session.config) / 60) || 1} min</span>
+            {plan.equipment.length > 0 && <span className={s.sub}>{plan.equipment.length === 1 && plan.equipment[0] === NO_EQUIPMENT ? NO_EQUIPMENT : `Prépare : ${equipmentText(plan.equipment)}`}</span>}
             {plan.missing > 0 && <p className={s.warn}>{plan.missing} exercice{plan.missing > 1 ? 's' : ''} supprimé{plan.missing > 1 ? 's' : ''} : sauté{plan.missing > 1 ? 's' : ''}.</p>}
             <button className={[s.big, s.bigPrimary].join(' ')} onClick={() => void start()}><Play size={22} fill="currentColor" aria-hidden="true" />Commencer</button>
           </div>

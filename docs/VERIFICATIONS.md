@@ -191,7 +191,7 @@ Attention : la clé de l'IA n'est réglée dans Vercel que pour l'app habituelle
 | # | À faire sur l'iPad | Attendu |
 |---|---|---|
 | 13.1 | Réglages : regarde la version de l'app en bas. | Elle correspond au dernier déploiement. Sinon, ferme complètement l'app et rouvre-la. |
-| 13.2 | Ouvre une vidéo TikTok à découper, iPad en paysage. | La vidéo, « Couper ici » et la frise sont visibles sans faire défiler. |
+| 13.2 | Ouvre une vidéo TikTok à découper, iPad en paysage. | Comme avant : vitesses en rangée sous la vidéo, « Couper ici » et le pas en haut à droite. La frise est visible. |
 | 13.3 | Lance la lecture, touche « Couper ici » deux ou trois fois. | Un trait blanc avec une poignée apparaît à chaque coupe. |
 | 13.4 | Pose le doigt sur un trait et glisse à gauche, à droite. | Le trait suit le doigt, une bulle donne l'instant, la vidéo montre l'image à cet instant. Dis-moi si c'est saccadé ou si le trait est dur à attraper. |
 | 13.5 | Touche un trait sans glisser, puis « +0,1 s », « −1 s », « Retirer la coupe ». | La coupe bouge du pas indiqué, puis disparaît (les deux exercices fusionnent). |
@@ -202,3 +202,6 @@ Attention : la clé de l'IA n'est réglée dans Vercel que pour l'app habituelle
 | 13.10 | « Enregistrer N exercices ». | Tu arrives sur « Nouvelle séance », déjà remplie, étape 3. « Enregistrer la séance » te ramène à l'accueil, la séance est là. |
 | 13.11 | Accueil avec une vidéo importée mais pas découpée. | Rubrique « À continuer » avec la vignette et « Découper ». |
 | 13.12 | Vidéo YouTube (lien) : « Marquer ici », glisser un trait. | Même fonctionnement ; le lecteur YouTube suit avec un léger retard, c'est normal. |
+| 13.13 | Réglages : « Langue des annonces » sur English, choisis une voix anglaise, « Tester le son » (mode « + consignes »). | « Next: Cat cow, 45 seconds. » avec une voix anglaise, Spotify continue. |
+| 13.14 | Lance une séance en mode « + consignes ». | Entre deux exercices : « Next: {nom}, {durée} seconds. » |
+| 13.15 | Création de séance : coche « Bandes élastiques » et « Blocs de yoga », puis « Autre… » et écris « Tapis ». Enregistre. | L'équipement s'affiche sur la carte de la séance, sur la séance du jour et au départ de la séance (« Prépare : … »). |

@@ -3,29 +3,17 @@
 .cols { display: flex; gap: 20px; flex: 1; min-height: 0; align-items: flex-start; }
 .stage { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
 .side { width: 384px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
-.preview { position: relative; height: clamp(220px, 36vh, 480px); border-radius: var(--radius-m); background: var(--bg-deep); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.preview { position: relative; height: clamp(240px, 46vh, 520px); border-radius: var(--radius-m); background: var(--bg-deep); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .preview video { width: 100%; height: 100%; object-fit: contain; }
 .time { position: absolute; left: 16px; bottom: 14px; padding: 6px 12px; border-radius: var(--radius-s); background: var(--surface-2); font-size: 14px; }
-.watch { display: flex; flex-direction: column; gap: 12px; }
-.controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
-.controls .cut { flex-basis: 100%; }
-.controls p { flex-basis: 100%; }
-/* Vidéo en hauteur : elle prend toute la hauteur disponible, les commandes se rangent à sa droite. */
-.watchPortrait { flex-direction: row; align-items: stretch; gap: 16px; }
-.watchPortrait .preview { height: clamp(300px, calc(100dvh - 372px), 640px); flex-shrink: 0; }
-.watchPortrait .controls { flex: 1; min-width: 0; flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: center; gap: 16px; }
-.watchPortrait .controls .cut { flex-basis: auto; min-height: 88px; font-size: 21px; }
-.watchPortrait .controls p { flex-basis: auto; }
-.watchPortrait .speed { justify-content: center; min-height: 64px; }
-.transport { flex: 1; min-width: 0; max-width: 540px; display: grid; grid-template-columns: repeat(2, minmax(58px, 1fr)) minmax(112px, 1.8fr) repeat(2, minmax(58px, 1fr)); gap: 8px; align-items: center; }
-.watchPortrait .transport { flex: none; max-width: none; }
+.transport { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; }
 .speeds { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%; }
 .pickRow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .pick { min-height: var(--touch); padding: 0 16px; border-radius: var(--radius-s); border: 2px solid var(--border); background: transparent; color: var(--text); font-weight: 600; font-size: 15px; cursor: pointer; }
 .pickOn { background: var(--effort); border-color: var(--effort); color: var(--on-accent); }
 .card { background: var(--surface); border-radius: var(--radius-m); padding: 20px; display: flex; flex-direction: column; gap: 14px; }
 .label { font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
-.cut { min-height: 64px; font-size: 19px; font-variant-numeric: tabular-nums; }
+.cut { min-height: 68px; font-size: 18px; font-variant-numeric: tabular-nums; }
 .selInfo { display: flex; gap: 14px; align-items: center; }
 .mini { width: 112px; height: 112px; flex-shrink: 0; border-radius: var(--radius-s); background: var(--bg-deep); overflow: hidden; display: flex; align-items: center; justify-content: center; }
 .mini video { width: 100%; height: 100%; object-fit: contain; }
@@ -53,10 +41,6 @@
 
 /* En-tête, lecture, coupe */
 .topTitle { display: flex; align-items: center; gap: 16px; min-width: 0; }
-.jump { padding: 0 6px; gap: 6px; min-width: 0; }
-.playBtn { min-width: 0; min-height: 60px; padding: 0 12px; font-size: 18px; }
-.speed { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: var(--radius-m); background: var(--surface); }
-.speed strong { min-width: 56px; text-align: center; font-family: var(--font-title); font-size: 18px; font-variant-numeric: tabular-nums; }
 .line { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 input.rowName { background: transparent; border: none; color: inherit; font: inherit; font-weight: 600; font-size: 16px; padding: 0; min-height: 28px; width: 100%; }
 .field textarea { border-radius: var(--radius-s); border: 2px solid var(--border); background: var(--bg-deep); padding: 10px 12px; color: var(--text); font: inherit; }

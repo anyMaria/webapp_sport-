@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check, ChevronDown, ChevronLeft, FastForward, ListOrdered, Merge, Minus, Pause, Play, Plus, Rewind, RotateCcw, Scissors, Sparkles, Timer, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, FastForward, ListOrdered, Merge, Pause, Play, Rewind, RotateCcw, Scissors, Sparkles, Timer, Trash2 } from 'lucide-react'
 import { db } from '../data/db'
 import type { VideoSource } from '../data/types'
 import { useOpfsUrl } from '../video/useOpfsUrl'
@@ -32,6 +32,7 @@ const RATES = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 5, 10]
 /** Le lecteur YouTube s'arrête à 2x : au-delà, on avance par petits sauts. */
 const YT_MAX_RATE = 2
 type Help = 'ai' | 'rhythm' | 'chapters' | null
+const STEPS = [0.5, 1, 3, 5]
 const fmt = (n: number) => String(n).replace('.', ',')
 const nowMs = () => performance.now()
 /** Instant au dixième de seconde : « 1:05,4 ». */
@@ -85,8 +86,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [rate, setRate] = useState(1)
   const rateRef = useRef(1)
   const [playing, setPlaying] = useState(false)
-  /** Largeur / hauteur de la vidéo : une vidéo en hauteur (TikTok) se place à côté des commandes, pas au-dessus. */
-  const [aspect, setAspect] = useState<number | null>(null)
+  const [step, setStep] = useState(1)
   const [cutMsg, setCutMsg] = useState<string | null>(null)
   const [help, setHelp] = useState<Help>(null)
   const [confirmReset, setConfirmReset] = useState(false)
@@ -376,9 +376,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
     setSegs(w); setSelId(w[0]!.id); setCutSel(null); setNotes([])
   }
   const toggleHelp = (h: Help) => { setHelp(help === h ? null : h); setNotes([]) }
-  const rateIndex = RATES.indexOf(rate)
   const cutLabel = isYT ? 'Marquer ici' : 'Couper ici'
-  const portrait = !isYT && aspect !== null && aspect < 0.9
 
   return (
     <main className={c.page}>
@@ -398,47 +396,35 @@ function SplitEditor({ source }: { source: VideoSource }) {
 
       <div className={c.cols}>
         <div className={c.stage}>
-          <div className={[c.watch, portrait ? c.watchPortrait : ''].join(' ')}>
-            <div className={c.preview} style={portrait ? { aspectRatio: String(aspect) } : undefined}>
-              {isYT && <div ref={ytHost} style={{ position: 'absolute', inset: 0 }} />}
-              {ytError && <span role="alert" style={{ position: 'absolute', padding: 16, color: 'var(--transition)', textAlign: 'center' }}>{ytError}</span>}
-              {!isYT && url && (
-                <video
-                  ref={video}
-                  src={url}
-                  muted
-                  playsInline
-                  aria-label="Vidéo à découper"
-                  onLoadedMetadata={(e) => { const v = e.currentTarget; if (v.videoWidth && v.videoHeight) setAspect(v.videoWidth / v.videoHeight) }}
-                  onLoadedData={(e) => { e.currentTarget.playbackRate = rateRef.current; void e.currentTarget.play().catch(() => undefined) }}
-                  onPlay={() => setPlaying(true)}
-                  onPause={() => setPlaying(false)}
-                  onEnded={() => setPlaying(false)}
-                  onSeeked={(e) => { const t = pendingSeek.current; if (t !== null) { pendingSeek.current = null; e.currentTarget.currentTime = t } }}
-                />
-              )}
-            </div>
+          <div className={c.preview}>
+            {isYT && <div ref={ytHost} style={{ position: 'absolute', inset: 0 }} />}
+            {ytError && <span role="alert" style={{ position: 'absolute', padding: 16, color: 'var(--transition)', textAlign: 'center' }}>{ytError}</span>}
+            {!isYT && url && (
+              <video
+                ref={video}
+                src={url}
+                muted
+                playsInline
+                aria-label="Vidéo à découper"
+                onLoadedData={(e) => { e.currentTarget.playbackRate = rateRef.current; void e.currentTarget.play().catch(() => undefined) }}
+                onPlay={() => setPlaying(true)}
+                onPause={() => setPlaying(false)}
+                onEnded={() => setPlaying(false)}
+                onSeeked={(e) => { const t = pendingSeek.current; if (t !== null) { pendingSeek.current = null; e.currentTarget.currentTime = t } }}
+              />
+            )}
+          </div>
 
-            <div className={c.controls}>
-              <div className={c.transport} role="group" aria-label="Lecture">
-                <Button className={c.jump} onClick={() => seekTo(getTime() - 5)} aria-label="Reculer de 5 secondes"><Rewind size={20} aria-hidden="true" />5 s</Button>
-                <Button className={c.jump} onClick={() => seekTo(getTime() - 1)} aria-label="Reculer de 1 seconde"><Rewind size={20} aria-hidden="true" />1 s</Button>
-                <Button variant="primary" className={c.playBtn} onClick={togglePlay} aria-label={playing ? 'Pause' : 'Lecture'}>
-                  {playing ? <Pause size={22} aria-hidden="true" /> : <Play size={22} aria-hidden="true" />}{playing ? 'Pause' : 'Lecture'}
-                </Button>
-                <Button className={c.jump} onClick={() => seekTo(getTime() + 1)} aria-label="Avancer de 1 seconde">1 s<FastForward size={20} aria-hidden="true" /></Button>
-                <Button className={c.jump} onClick={() => seekTo(getTime() + 5)} aria-label="Avancer de 5 secondes">5 s<FastForward size={20} aria-hidden="true" /></Button>
-              </div>
-              <div className={c.speed} role="group" aria-label="Vitesse de lecture">
-                <span className={c.label}>Vitesse</span>
-                <IconButton label="Lecture plus lente" disabled={rateIndex <= 0} onClick={() => changeRate(RATES[rateIndex - 1]!)}><Minus size={20} aria-hidden="true" /></IconButton>
-                <strong aria-live="polite">{fmt(rate)}x</strong>
-                <IconButton label="Lecture plus rapide" disabled={rateIndex >= RATES.length - 1} onClick={() => changeRate(RATES[rateIndex + 1]!)}><Plus size={20} aria-hidden="true" /></IconButton>
-              </div>
-              <Button variant="primary" className={c.cut} disabled={!duration} onClick={cutHere}>
-                <Scissors size={24} aria-hidden="true" />{cutLabel} · {clock(pos)}
-              </Button>
-              {cutMsg && <p role="alert" className={[s.msg, s.msgErr].join(' ')}>{cutMsg}</p>}
+          <div className={c.transport} role="group" aria-label="Lecture">
+            <Button onClick={() => seekTo(getTime() - step)} aria-label={`Reculer de ${fmt(step)} secondes`}><Rewind size={20} aria-hidden="true" />{fmt(step)} s</Button>
+            <Button variant="primary" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Lecture'}>
+              {playing ? <Pause size={22} aria-hidden="true" /> : <Play size={22} aria-hidden="true" />}{playing ? 'Pause' : 'Lecture'}
+            </Button>
+            <Button onClick={() => seekTo(getTime() + step)} aria-label={`Avancer de ${fmt(step)} secondes`}>{fmt(step)} s<FastForward size={20} aria-hidden="true" /></Button>
+            <div className={c.speeds} role="group" aria-label="Vitesse de lecture">
+              {RATES.map((r) => (
+                <button key={r} type="button" className={[c.pick, rate === r ? c.pickOn : ''].join(' ')} aria-pressed={rate === r} onClick={() => changeRate(r)}>{fmt(r)}x</button>
+              ))}
             </div>
           </div>
 
@@ -460,7 +446,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
                 <Button onClick={() => setSegs((l) => l.map((x) => (x.verify ? { ...x, verify: false } : x)))}><Check size={18} aria-hidden="true" />Tout est bon</Button>
               </div>
             ) : segs.length <= 1 ? (
-              <p className={c.tlHint}>Lance la lecture et touche « {cutLabel} » à chaque changement d'exercice. Chaque coupe devient un trait sur la frise : attrape-le pour l'ajuster. Glisse sur la règle du haut pour te déplacer dans la vidéo.</p>
+              <p className={c.tlHint}>Lance la lecture et touche « {cutLabel} » (à droite) à chaque changement d'exercice. Chaque coupe devient un trait sur la frise : attrape-le pour l'ajuster. Glisse sur la règle du haut pour te déplacer dans la vidéo.</p>
             ) : null}
           </Timeline>
 
@@ -483,6 +469,33 @@ function SplitEditor({ source }: { source: VideoSource }) {
         </div>
 
         <div className={c.side}>
+          <div className={c.card}>
+            <span className={c.label}>{isYT ? 'Marquage' : 'Coupes manuelles'}</span>
+            <Button variant="primary" className={c.cut} disabled={!duration} onClick={cutHere}>
+              <Scissors size={22} aria-hidden="true" />{cutLabel} · {clock(pos)}
+            </Button>
+            {cutMsg && <p role="alert" className={[s.msg, s.msgErr].join(' ')}>{cutMsg}</p>}
+            <div role="group" aria-label="Pas d'ajustement" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span className={ui.hint}>Pas pour reculer et avancer</span>
+              <div className={c.pickRow}>
+                {STEPS.map((v) => (
+                  <button key={v} type="button" className={[c.pick, step === v ? c.pickOn : ''].join(' ')} aria-pressed={step === v} onClick={() => setStep(v)}>{fmt(v)} s</button>
+                ))}
+              </div>
+            </div>
+            {confirmReset ? (
+              <div role="alertdialog" aria-label="Tout remettre à zéro" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <p className={s.msg}>Effacer toutes les coupes et repartir de la vidéo entière ?</p>
+                <div className={s.actions}>
+                  <Button variant="danger" onClick={() => { resetAll(); setConfirmReset(false) }}>Oui, tout effacer</Button>
+                  <Button onClick={() => setConfirmReset(false)}>Annuler</Button>
+                </div>
+              </div>
+            ) : segs.length > 1 && (
+              <Button variant="danger" onClick={() => setConfirmReset(true)}><RotateCcw size={18} aria-hidden="true" />Tout remettre à zéro</Button>
+            )}
+          </div>
+
           <div className={c.card}>
             <span className={c.label}>Aides pour aller plus vite</span>
 
@@ -566,17 +579,6 @@ function SplitEditor({ source }: { source: VideoSource }) {
               </HelpToggle>
             )}
 
-            {confirmReset ? (
-              <div role="alertdialog" aria-label="Tout remettre à zéro" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <p className={s.msg}>Effacer toutes les coupes et repartir de la vidéo entière ?</p>
-                <div className={s.actions}>
-                  <Button variant="danger" onClick={() => { resetAll(); setConfirmReset(false) }}>Oui, tout effacer</Button>
-                  <Button onClick={() => setConfirmReset(false)}>Annuler</Button>
-                </div>
-              </div>
-            ) : segs.length > 1 && (
-              <Button variant="danger" onClick={() => setConfirmReset(true)}><RotateCcw size={18} aria-hidden="true" />Tout remettre à zéro</Button>
-            )}
           </div>
 
           {sel && (

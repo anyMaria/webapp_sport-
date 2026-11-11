@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Pause, Play, Repeat2, SkipForward, X } from 'lucide-react'
 import { db, loadSettings, saveSettings } from '../data/db'
@@ -17,6 +17,8 @@ import { useSessionStore } from './useSessionStore'
 import { useWakeLock } from './useWakeLock'
 import { Button } from '../ui/Button'
 import { Screen } from '../app/Screen'
+import { useMotivation } from '../motivation/useMotivation'
+import { remainingThisWeek } from '../motivation/streak'
 import s from './session.module.css'
 
 const MODES: { id: AudioMode; label: string }[] = [
@@ -44,8 +46,9 @@ function ClipLayer({ clip, active, paused, muted, dimmed }: { clip: Clip; active
 
 export function SessionScreen() {
   const { workoutId = '' } = useParams()
+  const express = useSearchParams()[0].get('express') === '1'
   const [plan, setPlan] = useState<Plan | null | undefined>(undefined)
-  useEffect(() => { void buildPlan(workoutId).then(setPlan) }, [workoutId])
+  useEffect(() => { void buildPlan(workoutId, express).then(setPlan) }, [workoutId, express])
   if (plan === undefined) return null
   if (plan === null || plan.items.length === 0) {
     return (
@@ -62,6 +65,7 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
   const settings = useLiveQuery(() => loadSettings(), []) ?? DEFAULT_SETTINGS
   const { session, init, dispatch } = useSessionStore()
   const [confirmQuit, setConfirmQuit] = useState(false)
+  const mot = useMotivation()
   const logged = useRef(false)
 
   useEffect(() => {
@@ -155,6 +159,11 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
           <div className={s.stat}><span className={s.statNum}>{session.extensions}</span><span className={s.hint}>« Encore »</span></div>
         </div>
         <p className={s.hint}>{counted ? 'Cette séance compte pour ta semaine.' : 'Cette séance est trop courte pour compter. Pas de souci, on repart quand tu veux.'}</p>
+        <p role="status" style={{ margin: 0, fontSize: 20, fontFamily: 'var(--font-title)', fontWeight: 600 }}>
+          {mot.result.current.validated
+            ? `${mot.result.current.count} / ${mot.settings.weeklyGoal}, semaine validée`
+            : `${mot.result.current.count} / ${mot.settings.weeklyGoal} : encore ${remainingThisWeek(mot.result, mot.settings.weeklyGoal)} séance${remainingThisWeek(mot.result, mot.settings.weeklyGoal) > 1 ? 's' : ''} cette semaine`}
+        </p>
         <div><Button variant="primary" onClick={() => nav('/')} style={{ minHeight: 64, fontSize: 20 }}>Terminer</Button></div>
       </main>
     )

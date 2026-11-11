@@ -75,6 +75,11 @@ export interface Settings {
   extendSec: number // 30
   beepVolume: number // 0 à 1
   voiceName?: string
+  userName: string // prénom pour la salutation, vide par défaut
+  slotWorkoutId?: string // séance choisie pour le créneau
+  reminder: boolean // alarme 10 minutes avant, dans le fichier du calendrier
+  expressFallback: boolean // bouton « Version express » sur l'accueil
+  slotExportedKey?: string // créneau du dernier export au calendrier
 }
 
 /** Vignette stockée à part pour ne pas alourdir les exercices. */

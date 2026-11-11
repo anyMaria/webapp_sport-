@@ -1,0 +1,18 @@
+.card { background: var(--surface); border-radius: var(--radius-l); padding: 28px; display: flex; flex-direction: column; gap: 18px; }
+.label { font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+.streakRow { display: flex; align-items: baseline; gap: 12px; }
+.streak { font-family: var(--font-title); font-weight: 600; font-size: 120px; line-height: 1; color: var(--effort); }
+.streakText { font-size: 18px; font-weight: 600; line-height: 1.25; }
+.history { display: flex; flex-direction: column; gap: 12px; }
+.histRow { display: flex; align-items: center; gap: 12px; }
+.histLabel { width: 76px; font-size: 14px; color: var(--text-muted); }
+.dots { display: flex; gap: 6px; }
+.dot { width: 28px; height: 28px; border-radius: 14px; border: 2px solid var(--line); display: flex; align-items: center; justify-content: center; }
+.dotOn { background: var(--effort); border-color: var(--effort); color: var(--on-accent); }
+.joker { padding: 4px 10px; border-radius: var(--radius-s); background: var(--surface-2); color: var(--transition); font-size: 13px; font-weight: 600; }
+.note { padding: 14px; border-radius: var(--radius-m); background: var(--surface-2); font-size: 14px; line-height: 1.4; color: var(--text); }
+.dayRow { display: flex; gap: 8px; }
+.dayBtn { flex: 1; min-width: 44px; min-height: 52px; border-radius: var(--radius-s); border: 2px solid var(--border); background: transparent; color: var(--text); font-weight: 600; font-size: 15px; cursor: pointer; }
+.dayOn { background: var(--text); border-color: var(--text); color: var(--on-accent); }
+.timeField { display: flex; flex-direction: column; gap: 4px; }
+.time { font-family: var(--font-title); font-weight: 600; font-size: 56px; background: transparent; border: none; color: var(--text); padding: 0; letter-spacing: -1px; width: 100%; font-variant-numeric: tabular-nums; }

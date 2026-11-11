@@ -1,0 +1,43 @@
+.page { max-width: 1180px; margin: 0 auto; padding: 36px 36px 64px; display: flex; flex-direction: column; gap: 24px; min-height: 100dvh; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.hello h1 { font-size: 34px; line-height: 1.1; }
+.hello p { margin: 4px 0 0; font-size: 16px; color: var(--text-muted); }
+.pills { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pill { display: flex; align-items: center; gap: 8px; min-height: var(--touch); padding: 0 18px; border-radius: 26px; background: var(--surface); font-weight: 600; text-decoration: none; color: var(--text); }
+.pillGlow { background: var(--surface-2); color: var(--transition); border: 2px solid var(--transition); }
+.hero { display: flex; gap: 24px; min-height: 256px; }
+.today { flex: 1.7; padding: 32px; border-radius: var(--radius-l); background: var(--effort); color: var(--on-accent); display: flex; flex-direction: column; justify-content: space-between; gap: 24px; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; }
+.today h2 { font-size: 46px; line-height: 1.05; margin: 8px 0; }
+.todayMeta { font-size: 17px; }
+.start { display: inline-flex; align-items: center; gap: 10px; min-height: 64px; padding: 0 30px; border-radius: 32px; border: none; background: var(--bg-deep); color: var(--text); font-family: var(--font-title); font-weight: 600; font-size: 20px; cursor: pointer; }
+.express { min-height: 64px; padding: 0 24px; border-radius: 32px; border: 2px solid var(--on-accent); background: transparent; color: var(--on-accent); font-weight: 600; font-size: 16px; cursor: pointer; }
+.week { flex: 1; padding: 28px; border-radius: var(--radius-l); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between; gap: 18px; }
+.big { font-family: var(--font-title); font-weight: 600; font-size: 56px; line-height: 1.1; }
+.unit { font-size: 17px; color: var(--text-muted); margin-left: 10px; }
+.days { display: flex; justify-content: space-between; }
+.day { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.dot { width: 38px; height: 38px; border-radius: 19px; border: 2px solid var(--line); display: flex; align-items: center; justify-content: center; }
+.dotDone { background: var(--effort); border-color: var(--effort); color: var(--on-accent); }
+.dotToday { border: 3px solid var(--transition); background: var(--surface-2); }
+.dotSlot { border-style: dashed; border-color: var(--effort); }
+.track { height: 8px; border-radius: 4px; background: var(--line); }
+.fill { height: 8px; border-radius: 4px; background: var(--transition); }
+.hint { font-size: 14px; color: var(--text-muted); }
+.sectionHead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.sectionHead h2 { font-size: 24px; }
+.link { font-size: 16px; font-weight: 600; color: var(--effort); text-decoration: none; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; }
+.card { border-radius: var(--radius-m); background: var(--surface); overflow: hidden; display: flex; flex-direction: column; }
+.cover { position: relative; height: 132px; background: var(--surface-2); display: flex; align-items: flex-start; gap: 6px; padding: 14px; background-size: cover; background-position: center; }
+.chip { padding: 5px 10px; border-radius: 10px; background: var(--bg-deep); font-size: 13px; font-weight: 600; }
+.cardBody { padding: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-grow: 1; }
+.cardName { font-family: var(--font-title); font-weight: 600; font-size: 20px; line-height: 1.15; }
+.play { flex-shrink: 0; width: 52px; height: 52px; border-radius: 26px; border: none; background: var(--text); color: var(--on-accent); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.newCard { border-radius: var(--radius-m); border: 2px dashed var(--border); background: transparent; color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; min-height: 200px; cursor: pointer; font-family: var(--font-title); font-weight: 600; font-size: 20px; }
+.empty { background: var(--surface); border-radius: var(--radius-l); padding: 32px; display: flex; flex-direction: column; gap: 16px; }
+.foot { display: flex; gap: 20px; flex-wrap: wrap; }
+@media (max-width: 900px) { .hero { flex-direction: column; } .page { padding: 20px; } .today h2 { font-size: 34px; } }
+
+.coverImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.chip { position: relative; }

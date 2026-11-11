@@ -109,3 +109,28 @@ Cette phase demande une connexion. Je n'ai pas pu tester le lecteur YouTube lui-
 | 5.13 | Modes audio avec un exercice YouTube. | Muet dans tous les modes sauf « Son de la vidéo ». Spotify continue tant que la vidéo est muette. |
 
 Déjà vérifié sur ordinateur : lecture des liens et des repères (9 tests automatiques), message d'erreur hors réseau dans l'écran de découpage et en séance, création de la source sans plantage.
+
+## Phase 6 : motivation (série, créneau, express, accueil)
+
+Pour tester la série sans attendre des semaines, regarde d'abord l'accueil et « Mon rythme » avec tes vraies séances. Les cas limites (changement d'année, d'heure, semaine sur deux mois, joker) sont couverts par des tests automatiques ; sur l'iPad on vérifie l'usage réel.
+
+| # | Action | Résultat attendu |
+|---|---|---|
+| 6.1 | Ouvre l'accueil sans aucune séance. | Un message d'accueil clair avec « Importer une vidéo », pas d'écran vide. |
+| 6.2 | Avec des séances : regarde l'en-tête. | Salutation (Bonjour / Bonsoir), ligne du créneau du jour, pastille de série, bouton « Importer une vidéo ». Réglages : mets ton prénom, il apparaît. |
+| 6.3 | La carte « Séance du jour ». | Nom, durée, nombre d'exercices, « Commencer » et « Version express ». |
+| 6.4 | Fais une séance complète, reviens à l'accueil. | La carte « Cette semaine » passe à 1 / 2, la pastille du jour est cochée (avec une coche, pas seulement une couleur), la barre avance. |
+| 6.5 | L'écran de fin de séance. | Il dit « Cette séance compte pour ta semaine » et l'état de la semaine (« encore 1 séance » ou « semaine validée »). Une séance arrêtée très tôt ne compte pas, sans reproche. |
+| 6.6 | Fais deux séances le même jour. | Une seule compte pour la semaine (hypothèse à confirmer : **dis-moi si ça te convient**). |
+| 6.7 | Touche « Version express ». | Si une séance est marquée express, c'est elle ; sinon les premiers exercices de la séance du jour, environ 3 minutes. Dis-moi si la composition te convient. |
+| 6.8 | « Mon rythme ». | Série en grand, objectif, quatre dernières semaines en pastilles, phrase sur le joker. |
+| 6.9 | Change les jours, l'heure et la durée du créneau. | Les valeurs sont gardées après fermeture de l'app. |
+| 6.10 | « Ajouter à mon calendrier ». | La feuille de partage propose « Calendrier » (sinon un fichier .ics s'ouvre). L'événement apparaît chaque semaine aux bons jours, à la bonne heure, **avec le rappel 10 minutes avant** et le lien de l'app. |
+| 6.11 | Change le créneau après l'export. | Un message te demande de supprimer l'ancien événement avant d'ajouter le nouveau. |
+| 6.12 | Désactive « Séance express de secours ». | Le bouton express disparaît de l'accueil. |
+| 6.13 | Choisis une « Séance du créneau ». | Elle devient la séance du jour sur l'accueil. |
+| 6.14 | Ton de tous les messages. | Aucun reproche, aucun compteur de jours manqués. Dis-moi s'un texte te gêne. |
+
+Pas de notification : le rappel passe par le calendrier (plan). Pour tester la série sur plusieurs semaines sans attendre, tu peux me demander un jeu de données d'essai.
+
+Déjà vérifié : 31 tests automatiques (série sur tous les cas limites, y compris dans trois fuseaux horaires dont changement d'heure ; limites par jour et express ; export .ics : récurrence, heure flottante, alarme, longues lignes ; composition express). Accueil et « Mon rythme » affichés dans un navigateur avec des données d'essai, fichier .ics généré.

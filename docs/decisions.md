@@ -17,3 +17,11 @@ Décisions prises par Claude Code quand le plan ne tranchait pas. Option la plus
 | 5 | Pas de préchargement caché du lecteur YouTube : le suivant se charge à son tour, avec un court délai. | Le plan interdit de masquer le lecteur ; un lecteur invisible serait contraire à l'esprit de la règle. |
 | 5 | En séance, pour un exercice YouTube, pas de zone tactile ni d'assombrissement sur la vidéo, et les cartes sont placées sous le lecteur. | Le lecteur ne doit jamais être recouvert. La pause se fait par le bouton Pause. |
 | 5 | Titre d'une vidéo YouTube saisi à la main (facultatif), pas de requête vers YouTube pour le récupérer. | Pas de service tiers non prévu. La miniature vient de i.ytimg.com. |
+| 6 | Joker : rattaché au mois civil du dimanche de la semaine concernée. | Le plan ne dit pas quel mois choisir pour une semaine à cheval sur deux mois. |
+| 6 | Un seul joker par mois, imposé par le schéma de données (clé = mois). Le réglage `jokersPerMonth` reste à 1. | Éviter une migration de base ; le plan fixe un joker par mois. |
+| 6 | Jokers appliqués automatiquement à l'ouverture de l'accueil, de « Mon rythme » ou de la fin de séance (calcul pur depuis le journal, écriture idempotente). | Pas de serveur ni de tâche de fond : l'app calcule quand on l'ouvre. |
+| 6 | Limites « une séance comptée par jour, une express par semaine » dans `src/motivation/streak.ts` (constantes `MAX_COUNTED_PER_DAY`, `MAX_EXPRESS_PER_WEEK`). | Hypothèses du plan à confirmer. Elles s'appliquent au calcul de la semaine, le journal garde tout. |
+| 6 | L'accueil parle de « pochette » (plan, section 10) et non de « breloque » comme la maquette. Une pochette par semaine validée. | Le plan fait foi sur la maquette. |
+| 6 | Prénom : réglage libre (vide par défaut), pas de prénom écrit dans le code. | Donnée personnelle ; la maquette montre un prénom mais le plan parle seulement de salutation. |
+| 6 | Séance express : si aucune séance n'est marquée express, premiers exercices de la séance du jour jusqu'à 3 minutes et 4 exercices (`composeExpress`). | Hypothèse du plan à confirmer. |
+| 6 | « Séance du jour » : séance choisie pour le créneau, sinon dernière utilisée, sinon la plus récente. | Le plan le décrit ainsi ; le choix se fait dans « Mon rythme ». |

@@ -111,6 +111,12 @@ export function Settings() {
             </div>
           </Card>
 
+          <Card title="Toi">
+            <Row label="Prénom" hint="Pour la salutation de l'accueil.">
+              <input className={ui.select} aria-label="Prénom" value={settings.userName} maxLength={30} onChange={(e) => void saveSettings({ userName: e.target.value })} />
+            </Row>
+          </Card>
+
           <Card title="Séance">
             <Row label="Décompte entre exercices">
               <Stepper label="Durée du décompte" value={settings.countdownSec} min={3} max={15} unit="s" onChange={(v) => void saveSettings({ countdownSec: v })} />
@@ -174,6 +180,7 @@ export function Settings() {
 
           <Card title="Avancé">
             <Link to="/lab" style={{ color: 'var(--effort)', fontWeight: 600 }}>Page de tests (/lab)</Link>
+            <Link to="/demo" style={{ color: 'var(--effort)', fontWeight: 600 }}>Séance de démonstration</Link>
           </Card>
         </div>
       </div>

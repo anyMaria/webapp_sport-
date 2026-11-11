@@ -1,5 +1,6 @@
 import { db } from '../data/db'
 import type { PlayItem } from '../engine/session'
+import { composeExpress } from '../motivation/express'
 
 export type Clip =
   | { kind: 'file'; opfsPath: string; startSec: number; endSec: number }
@@ -20,15 +21,17 @@ export interface Plan {
 }
 
 /** Transforme une séance enregistrée en liste jouable. Un exercice supprimé est sauté et signalé. */
-export async function buildPlan(workoutId: string): Promise<Plan | null> {
+export async function buildPlan(workoutId: string, express = false): Promise<Plan | null> {
   const w = await db.workouts.get(workoutId)
   if (!w) return null
+  // Séance du jour lancée en version express : les premiers exercices, jusqu'à 3 minutes.
+  const wanted = express && !w.isExpress ? composeExpress(w.items) : w.items
   const items: PlayItem[] = []
   const clips: Clip[] = []
   const thumbIds: (string | undefined)[] = []
   const thumbYt: (string | undefined)[] = []
   let missing = 0
-  for (const it of w.items) {
+  for (const it of wanted) {
     const ex = await db.exercises.get(it.exerciseId)
     const src = ex ? await db.sources.get(ex.sourceId) : undefined
     if (!ex || !src) { missing++; continue }
@@ -39,5 +42,5 @@ export async function buildPlan(workoutId: string): Promise<Plan | null> {
     else if (src.kind === 'youtube' && src.youtubeId) clips.push({ kind: 'youtube', youtubeId: src.youtubeId, startSec: ex.startSec, endSec: ex.endSec })
     else clips.push({ kind: 'missing', startSec: ex.startSec, endSec: ex.endSec })
   }
-  return { workoutId: w.id, name: w.name, items, clips, thumbIds, thumbYt, missing, isExpress: w.isExpress }
+  return { workoutId: w.id, name: w.name, items, clips, thumbIds, thumbYt, missing, isExpress: w.isExpress || express }
 }

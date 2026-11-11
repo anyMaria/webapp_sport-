@@ -3,6 +3,7 @@ import { Lab } from './lab/Lab'
 import { Home } from './screens/Home'
 import { Settings } from './screens/Settings'
 import { Soon } from './screens/Soon'
+import { Rhythm } from './screens/Rhythm'
 import { Demo } from './screens/Demo'
 import { Import } from './screens/Import'
 import { Split } from './screens/Split'
@@ -19,7 +20,7 @@ export function App() {
       <Route path="/composer/:id" element={<Composer />} />
       <Route path="/import" element={<Import />} />
       <Route path="/decoupage/:sourceId" element={<Split />} />
-      <Route path="/mon-rythme" element={<Soon title="Mon rythme" phase={6} text="Ta série, ton créneau et la séance express." />} />
+      <Route path="/mon-rythme" element={<Rhythm />} />
       <Route path="/collection" element={<Soon title="Collection" phase={7} text="Tes stickers et la révélation des pochettes." />} />
       <Route path="/demo" element={<Demo />} />
       <Route path="/seance/:workoutId" element={<SessionScreen />} />

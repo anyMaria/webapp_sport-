@@ -1,25 +1,17 @@
-import { Link, Route, Routes } from 'react-router-dom'
-import { APP_NAME } from './lib/constants'
+import { Route, Routes } from 'react-router-dom'
 import { Lab } from './lab/Lab'
-
-function Home() {
-  return (
-    <main style={{ padding: 36, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <h1>{APP_NAME}</h1>
-      <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-        Phase 0 : l'app n'existe pas encore. Seule la page de tests est disponible.
-      </p>
-      <Link to="/lab" style={{ color: 'var(--effort)', fontWeight: 600 }}>
-        Ouvrir la page de tests /lab
-      </Link>
-    </main>
-  )
-}
+import { Home } from './screens/Home'
+import { Settings } from './screens/Settings'
+import { Soon } from './screens/Soon'
 
 export function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/reglages" element={<Settings />} />
+      <Route path="/bibliotheque" element={<Soon title="Bibliothèque d'exercices" phase={3} text="Tes exercices et la composition de séances." />} />
+      <Route path="/mon-rythme" element={<Soon title="Mon rythme" phase={6} text="Ta série, ton créneau et la séance express." />} />
+      <Route path="/collection" element={<Soon title="Collection" phase={7} text="Tes stickers et la révélation des pochettes." />} />
       <Route path="/lab" element={<Lab />} />
       <Route path="*" element={<Home />} />
     </Routes>

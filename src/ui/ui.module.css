@@ -1,0 +1,19 @@
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: var(--touch); padding: 0 24px; border-radius: var(--radius-m); border: 2px solid var(--border); background: transparent; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 16px; cursor: pointer; text-decoration: none; transition: background 200ms, opacity 200ms; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.primary { background: var(--effort); border-color: var(--effort); color: var(--on-accent); font-family: var(--font-title); }
+.danger { border-color: var(--danger); color: var(--danger); }
+.round { width: var(--touch); padding: 0; border-radius: 50%; background: var(--surface); border-color: transparent; }
+.card { background: var(--surface); border-radius: var(--radius-l); padding: 28px; display: flex; flex-direction: column; gap: 18px; }
+.label { font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: var(--touch); }
+.rowText { display: flex; flex-direction: column; gap: 2px; }
+.hint { font-size: 14px; color: var(--text-muted); }
+.switchBtn { flex-shrink: 0; width: 64px; height: var(--touch); padding: 0; border: none; background: transparent; cursor: pointer; }
+.track { display: flex; align-items: center; width: 56px; height: 32px; padding: 4px; border-radius: 16px; background: var(--border); transition: background 200ms; margin: 0 auto; }
+.trackOn { background: var(--effort); justify-content: flex-end; }
+.thumb { width: 24px; height: 24px; border-radius: 12px; background: var(--text); }
+.trackOn .thumb { background: var(--on-accent); }
+.stepper { display: flex; align-items: center; gap: 8px; }
+.value { min-width: 64px; text-align: center; font-family: var(--font-title); font-weight: 600; font-size: 20px; font-variant-numeric: tabular-nums; }
+.select, .range { min-height: var(--touch); border-radius: var(--radius-s); border: 2px solid var(--border); background: var(--bg-deep); padding: 0 12px; max-width: 320px; }
+.range { padding: 0; accent-color: var(--effort); width: 240px; }

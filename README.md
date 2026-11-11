@@ -5,7 +5,8 @@ PWA personnelle qui transforme des vidéos d'exercices en séances d'étirements
 Le plan complet : [docs/PLAN.md](docs/PLAN.md). Règles de travail : [CLAUDE.md](CLAUDE.md).
 
 ## État
-Phase 0 (faisabilité) : la page `/lab` contient les sept tests à passer sur l'iPad. Résultats dans [docs/phase0.md](docs/phase0.md).
+Phase 0 (faisabilité) : tests passés sur iPad, sauf le 5 (stockage) et le 7 (analyse audio). Résultats dans [docs/phase0.md](docs/phase0.md).
+Phase 1 (socle) : PWA, thème nuit, navigation, base de données locale, réglages, sauvegarde et restauration JSON.
 
 ## Commandes
 ```bash

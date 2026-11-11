@@ -45,14 +45,16 @@ export function pickVisionModel(ids: string[]): string | null {
 }
 
 let discovered: string | null | undefined
-async function listModels(k: string, base: string): Promise<{ ok: true; ids: string[] } | { ok: false; status: number }> {
+/** Résultat à champs facultatifs (pas d'union) : se compile aussi avec les réglages moins stricts de Vercel. */
+interface ModelList { ok: boolean; ids: string[]; status: number }
+async function listModels(k: string, base: string): Promise<ModelList> {
   try {
     const r = await fetch(`${base}/models`, { headers: { authorization: `Bearer ${k}` } })
-    if (!r.ok) return { ok: false, status: r.status }
+    if (!r.ok) return { ok: false, ids: [], status: r.status }
     const j = (await r.json()) as { data?: { id?: string }[] }
-    return { ok: true, ids: (j.data ?? []).map((m) => m.id ?? '').filter(Boolean) }
+    return { ok: true, ids: (j.data ?? []).map((m) => m.id ?? '').filter(Boolean), status: 200 }
   } catch {
-    return { ok: false, status: 0 }
+    return { ok: false, ids: [], status: 0 }
   }
 }
 async function model(k: string, base: string): Promise<string | null> {
@@ -69,7 +71,8 @@ type Part = { type: 'text'; text: string } | { type: 'image_url'; image_url: { u
 const jpeg = (b64: string): Part => ({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${b64}` } })
 const b64ok = (s: unknown): s is string => typeof s === 'string' && s.length > 0 && s.length <= MAX_IMAGE_CHARS && /^[A-Za-z0-9+/=]+$/.test(s)
 
-async function ask(k: string, base: string, mdl: string, content: Part[], maxTokens: number): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+interface Answer { ok: boolean; text: string; error: string }
+async function ask(k: string, base: string, mdl: string, content: Part[], maxTokens: number): Promise<Answer> {
   try {
     const r = await fetch(`${base}/chat/completions`, {
       method: 'POST',
@@ -79,12 +82,12 @@ async function ask(k: string, base: string, mdl: string, content: Part[], maxTok
     if (!r.ok) {
       const j = (await r.json().catch(() => ({}))) as { error?: { message?: string } | string }
       const msg = typeof j.error === 'string' ? j.error : j.error?.message
-      return { ok: false, error: `Le service d'IA a refusé la demande (code ${r.status})${msg ? ` : ${msg.slice(0, 200)}` : ''}.` }
+      return { ok: false, text: '', error: `Le service d'IA a refusé la demande (code ${r.status})${msg ? ` : ${msg.slice(0, 200)}` : ''}.` }
     }
     const data = (await r.json()) as { choices?: { message?: { content?: string } }[] }
-    return { ok: true, text: data.choices?.[0]?.message?.content ?? '' }
+    return { ok: true, text: data.choices?.[0]?.message?.content ?? '', error: '' }
   } catch {
-    return { ok: false, error: "Le service d'IA est injoignable." }
+    return { ok: false, text: '', error: "Le service d'IA est injoignable." }
   }
 }
 

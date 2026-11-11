@@ -501,7 +501,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
               {aiSegOn && !progress && (
                 aiSegConfirm ? (
                   <div role="alertdialog" aria-label="Envoyer des images au service d'IA" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <p className={s.msg}>Une soixantaine d'images de cette vidéo vont quitter l'iPad pour être envoyées à un service d'IA (Groq ou xAI). Il peut être payant à l'usage.</p>
+                    <p className={s.msg}>Une soixantaine d'images de cette vidéo vont quitter l'iPad pour être envoyées à {aiInfo?.provider ?? "un service d'IA"}, qui les analyse. Elles ne sont pas enregistrées dans l'app.</p>
                     <div className={s.actions}><Button variant="primary" onClick={() => void runAiSegments()}>Envoyer les images</Button><Button onClick={() => setAiSegConfirm(false)}>Annuler</Button></div>
                   </div>
                 ) : (
@@ -520,7 +520,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {aiConfirm ? (
                     <div role="alertdialog" aria-label="Envoyer des images à un service d'IA" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <p className={s.msg}>Des images de cette vidéo (2 ou 3 par exercice gardé) vont quitter l'iPad pour être envoyées à un service d'IA. Ce service est payant à l'usage.</p>
+                      <p className={s.msg}>Des images de cette vidéo (3 par exercice gardé) vont quitter l'iPad pour être envoyées à {aiInfo?.provider ?? "un service d'IA"}, qui les analyse. Elles ne sont pas enregistrées dans l'app.</p>
                       <div className={s.actions}><Button variant="primary" onClick={() => void runAi()}>Envoyer les images</Button><Button onClick={() => setAiConfirm(false)}>Annuler</Button></div>
                     </div>
                   ) : (

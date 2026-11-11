@@ -9,7 +9,7 @@ function call(method: string, body?: unknown) {
 }
 
 describe('api/ai-segments sans clé', () => {
-  it('GET : désactivé', async () => { expect(await call('GET')).toEqual({ status: 200, json: { enabled: false } }) })
+  it('GET : désactivé', async () => { expect(await call('GET')).toEqual({ status: 200, json: { enabled: false, hasKey: false } }) })
   it('POST : refusé', async () => { expect((await call('POST', {})).status).toBe(503) })
   it('autres méthodes refusées', async () => { expect((await call('PUT')).status).toBe(405) })
 })

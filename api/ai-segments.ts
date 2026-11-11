@@ -1,11 +1,11 @@
-import { askVision, jpegPart, xaiConfig, type Part } from './_xai'
+import { askVision, jpegPart, listModels, xaiConfig, xaiKey, type Part } from './_xai'
 
 /**
  * Découpe par IA (optionnelle). Reçoit des images réduites prises à intervalles réguliers dans une vidéo,
  * avec leur instant, et renvoie les exercices repérés : { start, end, name, cue }.
  * Service : Grok (xAI), voir _xai.ts. Sans clé ou sans modèle : { enabled: false }, le bouton n'apparaît pas.
  */
-interface Req { method?: string; body?: unknown }
+interface Req { method?: string; body?: unknown; query?: Record<string, string | string[] | undefined> }
 interface Res { status(code: number): Res; json(body: unknown): void }
 
 export const MAX_FRAMES = 60
@@ -45,7 +45,13 @@ export function parseFound(text: string, duration: number): Found[] {
 
 export default async function handler(req: Req, res: Res): Promise<void> {
   const cfg = xaiConfig()
-  if (req.method === 'GET') return res.status(200).json({ enabled: Boolean(cfg) })
+  if (req.method === 'GET' && req.query?.models) {
+    // Aide au réglage : liste des modèles disponibles avec la clé, pour choisir XAI_MODEL.
+    if (!xaiKey()) return res.status(503).json({ error: 'Aucune clé trouvée (XAI_API_KEY ou GROCK_API).' })
+    const m = await listModels()
+    return m.ok ? res.status(200).json({ models: m.models }) : res.status(502).json({ error: `xAI a refusé la demande (code ${m.status}).` })
+  }
+  if (req.method === 'GET') return res.status(200).json({ enabled: Boolean(cfg), hasKey: Boolean(xaiKey()) })
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée.' })
   if (!cfg) return res.status(503).json({ error: "La découpe par IA n'est pas activée." })
   const body = parseBody(req.body)

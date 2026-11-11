@@ -1,6 +1,7 @@
 import { db, loadSettings } from '../data/db'
 import type { StickerUnlock } from '../data/types'
 import { computeStreak } from '../motivation/streak'
+import { baseIdOf, stickerById } from './catalog'
 import { evaluateUnlocks, type UnlockFlags } from './unlock'
 
 const rng = () => crypto.getRandomValues(new Uint32Array(1))[0]! / 2 ** 32
@@ -28,7 +29,11 @@ export async function syncUnlocks(now = new Date()): Promise<StickerUnlock[]> {
   const [settings, logs, jokers, flags] = await Promise.all([loadSettings(), db.sessionLogs.toArray(), db.jokerUses.toArray(), readFlags()])
   const result = computeStreak(logs, jokers, { weeklyGoal: settings.weeklyGoal, jokersPerMonth: settings.jokersPerMonth, now })
   return db.transaction('rw', db.stickerUnlocks, async () => {
-    const owned = await db.stickerUnlocks.toArray()
+    // Anciens stickers qui ne sont plus au catalogue (remplacés par les dessins de l'utilisatrice) : retirés, la pochette est retirée au sort.
+    const all = await db.stickerUnlocks.toArray()
+    const stale = all.filter((u) => !stickerById.has(baseIdOf(u.stickerId)))
+    if (stale.length) await db.stickerUnlocks.bulkDelete(stale.map((u) => u.stickerId))
+    const owned = all.filter((u) => stickerById.has(baseIdOf(u.stickerId)))
     const fresh = evaluateUnlocks({ validatedWeeks: result.validatedWeeks, countedSessions: logs.filter((l) => l.counted).length, streak: result.streak, owned, flags, rng, now })
     if (fresh.length) await db.stickerUnlocks.bulkPut(fresh)
     return fresh

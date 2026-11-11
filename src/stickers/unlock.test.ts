@@ -10,13 +10,15 @@ const base = (extra: Partial<UnlockInput> = {}): UnlockInput => ({ validatedWeek
 const own = (...ids: string[]): StickerUnlock[] => ids.map((stickerId) => ({ stickerId, reason: 'week', weekKey: `w-${stickerId}`, unlockedAt: 'x', revealed: true }))
 
 describe('catalogue', () => {
-  it('40 stickers : 8 + 8 + 8 + 8 + 5 + 3, tous avec un dessin', () => {
-    expect(STICKERS).toHaveLength(40)
-    const count = (s: string) => STICKERS.filter((x) => x.series === s).length
-    expect([count('ciel-nuit'), count('rituels'), count('energie'), count('jardin'), count('pierres'), count('bonus')]).toEqual([8, 8, 8, 8, 5, 3])
-    expect(WEEKLY_POOL).toHaveLength(32)
+  it('tous les stickers ont un dessin, un identifiant unique et une série connue', () => {
+    expect(STICKERS.length).toBeGreaterThan(100)
     expect(STICKERS.every((s) => artUrl(s.id).length > 0)).toBe(true)
-    expect(new Set(STICKERS.map((s) => s.id)).size).toBe(40)
+    expect(new Set(STICKERS.map((s) => s.id)).size).toBe(STICKERS.length)
+    const series = new Set(SERIES.map((x) => x.id))
+    expect(STICKERS.every((s) => series.has(s.series))).toBe(true)
+    expect(STICKERS.filter((s) => s.series === 'pierres')).toHaveLength(5)
+    expect(STICKERS.filter((s) => s.series === 'bonus')).toHaveLength(3)
+    expect(WEEKLY_POOL).toHaveLength(STICKERS.length - 8)
   })
   it('chaque série a une condition lisible pour ses emplacements vides', () => {
     for (const ser of SERIES) for (const s of STICKERS.filter((x) => x.series === ser.id)) expect(ser.condition(s).length).toBeGreaterThan(0)

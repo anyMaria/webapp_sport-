@@ -1,7 +1,9 @@
 /**
- * Catalogue des stickers : un fichier de données. Ajouter une série ne demande aucun autre changement de code :
- * ajouter une entrée dans SERIES, les stickers, et leurs dessins dans art/{id}.svg.
+ * Catalogue des stickers. Les stickers de l'utilisatrice viennent de mine.ts (généré par scripts/import-stickers.py,
+ * dessins dans art/{id}.webp) ; les pierres et les bonus sont définis ici (dessins SVG).
  */
+import { MINE, MINE_SERIES, type MineDef } from './mine'
+
 export type Rarity = 'common' | 'rare'
 export type Unlock =
   | { kind: 'week' } // une semaine validée : tirage au hasard
@@ -25,13 +27,13 @@ export interface SeriesDef {
   condition: (s: StickerDef) => string
 }
 
-const week: Unlock = { kind: 'week' }
+const week: Unlock = { kind: 'week' } // tirage au hasard à chaque pochette
 
+const drawn = () => 'Une pochette'
+
+/** Les séries de l'utilisatrice (dossiers importés, voir mine.ts), puis les séries à conditions particulières. */
 export const SERIES: SeriesDef[] = [
-  { id: 'ciel-nuit', name: 'Ciel de nuit', condition: () => 'Une pochette' },
-  { id: 'rituels', name: 'Petits rituels', condition: () => 'Une pochette' },
-  { id: 'energie', name: 'Énergie', condition: () => 'Une pochette' },
-  { id: 'jardin', name: 'Jardin', condition: () => 'Une pochette' },
+  ...MINE_SERIES.map((m) => ({ id: m.id, name: m.name, condition: drawn })),
   { id: 'pierres', name: 'Pierres', condition: (s) => (s.unlock.kind === 'streak' ? `${s.unlock.weeks} semaines d'affilée` : '') },
   {
     id: 'bonus', name: 'Bonus',
@@ -42,44 +44,10 @@ export const SERIES: SeriesDef[] = [
   },
 ]
 
-const c = (id: string, name: string, series: string): StickerDef => ({ id, name, series, rarity: 'common', unlock: week })
+const mine = (m: MineDef): StickerDef => ({ id: m.id, name: m.name, series: m.series, rarity: 'common', unlock: week })
 
 export const STICKERS: StickerDef[] = [
-  c('croissant-lune', 'Croissant de lune', 'ciel-nuit'),
-  c('etoile-filante', 'Étoile filante', 'ciel-nuit'),
-  c('saturne', 'Saturne', 'ciel-nuit'),
-  c('comete', 'Comète', 'ciel-nuit'),
-  c('constellation-chat', 'Constellation du chat', 'ciel-nuit'),
-  c('aurore-boreale', 'Aurore boréale', 'ciel-nuit'),
-  c('eclipse', 'Éclipse', 'ciel-nuit'),
-  c('nebuleuse', 'Nébuleuse', 'ciel-nuit'),
-
-  c('tapis-roule', 'Tapis roulé', 'rituels'),
-  c('tasse-fumante', 'Tasse fumante', 'rituels'),
-  c('bougie', 'Bougie', 'rituels'),
-  c('monstera', 'Monstera', 'rituels'),
-  c('chaussettes-epaisses', 'Chaussettes épaisses', 'rituels'),
-  c('casque-audio', 'Casque audio', 'rituels'),
-  c('gourde', 'Gourde', 'rituels'),
-  c('chat-etire', 'Chat qui s\'étire', 'rituels'),
-
-  c('eclair', 'Éclair', 'energie'),
-  c('flamme', 'Flamme', 'energie'),
-  c('fusee', 'Fusée', 'energie'),
-  c('soleil', 'Soleil', 'energie'),
-  c('etoile', 'Étoile', 'energie'),
-  c('coeur', 'Cœur', 'energie'),
-  c('diamant', 'Diamant', 'energie'),
-  c('trophee', 'Trophée', 'energie'),
-
-  c('fleur', 'Fleur', 'jardin'),
-  c('feuille', 'Feuille', 'jardin'),
-  c('goutte', 'Goutte', 'jardin'),
-  c('papillon', 'Papillon', 'jardin'),
-  c('champignon', 'Champignon', 'jardin'),
-  c('cactus', 'Cactus', 'jardin'),
-  c('arcenciel', 'Arc-en-ciel', 'jardin'),
-  c('nuage', 'Nuage', 'jardin'),
+  ...MINE.map(mine),
 
   { id: 'pierre-de-lune', name: 'Pierre de lune', series: 'pierres', rarity: 'rare', unlock: { kind: 'streak', weeks: 4 } },
   { id: 'amethyste', name: 'Améthyste', series: 'pierres', rarity: 'rare', unlock: { kind: 'streak', weeks: 8 } },

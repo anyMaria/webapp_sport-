@@ -19,8 +19,9 @@ import { Timeline } from '../import/Timeline'
 import { Stepper } from '../ui/Stepper'
 import { analyzeVideo } from '../import/detect/analyze'
 import { getVideoFile } from '../data/opfs'
-import { aiSegmentsEnabled, buildSegments, requestSegments, sampleSheets } from '../import/aiSegments'
-import { aiLabelsEnabled, extractFrames, requestLabels, type Label } from '../import/aiLabels'
+import { aiStatus, type AiStatus } from '../import/aiClient'
+import { buildSegments, requestSegments, sampleSheets } from '../import/aiSegments'
+import { extractFrames, requestLabels, type Label } from '../import/aiLabels'
 import { Button, IconButton } from '../ui/Button'
 import ui from '../ui/ui.module.css'
 import c from '../import/import.module.css'
@@ -80,9 +81,10 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [aiBusy, setAiBusy] = useState(false)
   const [aiProposals, setAiProposals] = useState<Label[] | null>(null)
   const [aiError, setAiError] = useState<string | null>(null)
-  const [aiSegOn, setAiSegOn] = useState(false)
+  const [aiInfo, setAiInfo] = useState<AiStatus | null>(null) // null : vérification en cours
+  const aiSegOn = aiInfo?.enabled === true
   const [aiSegConfirm, setAiSegConfirm] = useState(false)
-  useEffect(() => { if (source.kind === 'file') { void aiLabelsEnabled().then(setAiOn); void aiSegmentsEnabled().then(setAiSegOn) } }, [source.kind])
+  useEffect(() => { void aiStatus().then((st) => { setAiInfo(st); setAiOn(st.enabled && source.kind === 'file') }) }, [source.kind])
   const abort = useRef<AbortController | null>(null)
 
   const analyze = async () => {
@@ -382,7 +384,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
             <div className={c.pickRow} role="group" aria-label="Mode de découpe">
               <button type="button" className={[c.pick, mode === 'manual' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'manual'} onClick={() => setMode('manual')}>Coupes manuelles</button>
               <button type="button" className={[c.pick, mode === 'rhythm' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'rhythm'} onClick={() => setMode('rhythm')}>Rythme régulier</button>
-              {!isYT && <button type="button" className={[c.pick, mode === 'ai' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'ai'} onClick={() => setMode('ai')}>Découpe IA</button>}
+              <button type="button" className={[c.pick, mode === 'ai' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'ai'} onClick={() => setMode('ai')}>Découpe IA</button>
               {isYT && <button type="button" className={[c.pick, mode === 'youtube' ? c.pickOn : ''].join(' ')} aria-pressed={mode === 'youtube'} onClick={() => setMode('youtube')}>Marquage YouTube</button>}
             </div>
           </div>
@@ -510,10 +512,23 @@ function SplitEditor({ source }: { source: VideoSource }) {
             </div>
           )}
 
+          {isYT && mode === 'ai' && (
+            <div className={c.card}>
+              <span className={c.label}>Découpe IA</span>
+              <p className={ui.hint} style={{ margin: 0 }}>L'IA a besoin des images de la vidéo, et le lecteur YouTube ne les donne pas. Pour utiliser l'IA, importe le fichier vidéo (« Importer une vidéo » puis YouTube, « Choisir des fichiers »). Ici, utilise « Marquage YouTube » ou « Rythme régulier ».</p>
+            </div>
+          )}
+
           {!isYT && mode === 'ai' && (
             <div className={c.card}>
               <span className={c.label}>Découpe IA</span>
               <p className={ui.hint} style={{ margin: 0 }}>Propose des coupes automatiquement. À vérifier : corrige ensuite à la main.</p>
+              {aiInfo === null && <p className={ui.hint} style={{ margin: 0 }}>Vérification du service d'IA…</p>}
+              {aiInfo !== null && !aiSegOn && (
+                <p role="status" className={ui.hint} style={{ margin: 0, color: 'var(--transition)' }}>
+                  {aiInfo.hasKey ? `Le bouton « Découper avec l'IA » est caché : ${aiInfo.reason ?? "aucun modèle de vision n'est choisi (variable XAI_MODEL)."}` : "Le bouton « Découper avec l'IA » est caché : le service d'IA n'est pas joignable ou n'a pas de clé. Si tu viens de le configurer, ferme complètement l'app et rouvre-la pour charger la dernière version."}
+                </p>
+              )}
               {aiSegOn && !progress && (
                 aiSegConfirm ? (
                   <div role="alertdialog" aria-label="Envoyer des images au service d'IA" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

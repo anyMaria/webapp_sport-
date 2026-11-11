@@ -1,5 +1,5 @@
 /** Échanges avec la fonction serveur /api/ai (voir api/ai.ts). */
-export interface AiStatus { enabled: boolean; hasKey?: boolean; provider?: string; model?: string | null }
+export interface AiStatus { enabled: boolean; hasKey?: boolean; provider?: string; model?: string | null; reason?: string }
 
 export async function aiStatus(): Promise<AiStatus> {
   try {

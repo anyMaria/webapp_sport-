@@ -185,6 +185,7 @@ export function Settings() {
           <Card title="Avancé">
             <Link to="/lab" style={{ color: 'var(--effort)', fontWeight: 600 }}>Page de tests (/lab)</Link>
             <Link to="/demo" style={{ color: 'var(--effort)', fontWeight: 600 }}>Séance de démonstration</Link>
+            <span className={ui.hint}>Version de l'app : {__BUILD__}</span>
           </Card>
         </div>
       </div>

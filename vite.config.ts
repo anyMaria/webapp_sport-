@@ -2,7 +2,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const sha = (process.env.VERCEL_GIT_COMMIT_SHA ?? 'local').slice(0, 7)
+
 export default defineConfig({
+  define: { __BUILD__: JSON.stringify(`${sha} · ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`) },
   plugins: [
     react(),
     VitePWA({
@@ -24,7 +27,7 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { navigateFallback: '/index.html', globPatterns: ['**/*.{js,css,html,png,woff2,webp,svg}'] },
+      workbox: { navigateFallback: '/index.html', navigateFallbackDenylist: [/^\/api\//], globPatterns: ['**/*.{js,css,html,png,woff2,webp,svg}'] },
     }),
   ],
 })

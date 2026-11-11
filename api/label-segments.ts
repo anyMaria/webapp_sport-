@@ -1,10 +1,9 @@
+import { askVision, jpegPart, xaiConfig, type Part } from './_xai'
+
 /**
  * Nommage par IA (optionnel). Reçoit 2 ou 3 images réduites par segment, renvoie { id, name, cue } en français.
- * La clé d'API et le nom du modèle restent côté serveur, en variables d'environnement Vercel :
- *   ANTHROPIC_API_KEY  et  LABEL_MODEL
- * Sans l'une des deux, la fonction répond { enabled: false } et le bouton n'apparaît pas dans l'app.
- * Le nom du modèle et les limites d'images sont à vérifier dans la documentation actuelle de l'API :
- * rien n'est écrit en dur ici.
+ * Service : Grok (xAI), voir _xai.ts. Sans clé ou sans modèle, la fonction répond { enabled: false }
+ * et le bouton n'apparaît pas dans l'app.
  */
 interface Req { method?: string; body?: unknown }
 interface Res { status(code: number): Res; json(body: unknown): void }
@@ -16,8 +15,6 @@ const CUE_MAX = 80
 
 interface Segment { id: string; images: string[] }
 interface Label { id: string; name: string; cue: string }
-
-const env = (k: string) => (globalThis as unknown as { process?: { env: Record<string, string | undefined> } }).process?.env[k]
 
 function parseBody(b: unknown): Segment[] | null {
   const segs = (b as { segments?: unknown } | null)?.segments
@@ -45,17 +42,15 @@ function parseLabels(text: string, ids: string[]): Label[] {
 }
 
 export default async function handler(req: Req, res: Res): Promise<void> {
-  const key = env('ANTHROPIC_API_KEY')
-  const model = env('LABEL_MODEL')
-  const enabled = Boolean(key && model)
-  if (req.method === 'GET') return res.status(200).json({ enabled })
+  const cfg = xaiConfig()
+  if (req.method === 'GET') return res.status(200).json({ enabled: Boolean(cfg) })
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée.' })
-  if (!enabled) return res.status(503).json({ error: "Le nommage par IA n'est pas activé." })
+  if (!cfg) return res.status(503).json({ error: "Le nommage par IA n'est pas activé." })
 
   const segments = parseBody(req.body)
   if (!segments) return res.status(400).json({ error: 'Requête invalide.' })
 
-  const content: unknown[] = [
+  const content: Part[] = [
     {
       type: 'text',
       text:
@@ -65,20 +60,10 @@ export default async function handler(req: Req, res: Res): Promise<void> {
   ]
   for (const s of segments) {
     content.push({ type: 'text', text: `Segment ${s.id} :` })
-    for (const data of s.images) content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } })
+    for (const data of s.images) content.push(jpegPart(data))
   }
 
-  try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': key!, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens: 2048, messages: [{ role: 'user', content }] }),
-    })
-    if (!r.ok) return res.status(502).json({ error: `Le service d'IA a refusé la demande (code ${r.status}).` })
-    const data = (await r.json()) as { content?: { type: string; text?: string }[] }
-    const text = (data.content ?? []).filter((c) => c.type === 'text').map((c) => c.text ?? '').join('\n')
-    return res.status(200).json({ labels: parseLabels(text, segments.map((s) => s.id)) })
-  } catch {
-    return res.status(502).json({ error: "Le service d'IA est injoignable." })
-  }
+  const r = await askVision(cfg, content, 2048)
+  if (!r.ok) return res.status(502).json({ error: r.status ? `Le service d'IA a refusé la demande (code ${r.status}).` : "Le service d'IA est injoignable." })
+  return res.status(200).json({ labels: parseLabels(r.text, segments.map((s) => s.id)) })
 }

@@ -19,6 +19,7 @@ import { Timeline } from '../import/Timeline'
 import { Stepper } from '../ui/Stepper'
 import { analyzeVideo } from '../import/detect/analyze'
 import { getVideoFile } from '../data/opfs'
+import { aiSegmentsEnabled, buildSegments, requestSegments, sampleFrames } from '../import/aiSegments'
 import { aiLabelsEnabled, extractFrames, requestLabels, type Label } from '../import/aiLabels'
 import { Button, IconButton } from '../ui/Button'
 import ui from '../ui/ui.module.css'
@@ -79,7 +80,9 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [aiBusy, setAiBusy] = useState(false)
   const [aiProposals, setAiProposals] = useState<Label[] | null>(null)
   const [aiError, setAiError] = useState<string | null>(null)
-  useEffect(() => { if (source.kind === 'file') void aiLabelsEnabled().then(setAiOn) }, [source.kind])
+  const [aiSegOn, setAiSegOn] = useState(false)
+  const [aiSegConfirm, setAiSegConfirm] = useState(false)
+  useEffect(() => { if (source.kind === 'file') { void aiLabelsEnabled().then(setAiOn); void aiSegmentsEnabled().then(setAiSegOn) } }, [source.kind])
   const abort = useRef<AbortController | null>(null)
 
   const analyze = async () => {
@@ -241,6 +244,31 @@ function SplitEditor({ source }: { source: VideoSource }) {
     setSegs(next)
     const i = next.findIndex((x) => x.id === host.id)
     setSelId(next[i + 1]!.id)
+  }
+
+  const runAiSegments = async () => {
+    if (!source.opfsPath) return
+    setAiSegConfirm(false); setNotes([])
+    const ctl = new AbortController()
+    abort.current = ctl
+    setProgress({ label: 'Images de la vidéo', ratio: 0 })
+    try {
+      const file = await getVideoFile(source.opfsPath)
+      const frames = await sampleFrames(file, source.durationSec, ctl.signal, (ratio) => setProgress({ label: 'Images de la vidéo', ratio }))
+      setProgress({ label: 'Réflexion de l\'IA', ratio: null })
+      const found = await requestSegments(frames, source.durationSec, ctl.signal)
+      const next = buildSegments(found, source.durationSec)
+      if (!next.some((x) => x.kept)) setNotes(["L'IA n'a repéré aucun exercice. Coupe à la main."])
+      else {
+        setSegs(next); setSelId(next.find((x) => x.kept)?.id ?? next[0]!.id)
+        setNotes([`${next.filter((x) => x.kept).length} exercices proposés. Les coupes sont approximatives (à quelques secondes près) : vérifie-les dans « Coupes manuelles ».`])
+      }
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') setNotes([(e as Error).message || 'La découpe par IA a échoué.'])
+    } finally {
+      setProgress(null)
+      abort.current = null
+    }
   }
 
   const runAi = async () => {
@@ -486,6 +514,17 @@ function SplitEditor({ source }: { source: VideoSource }) {
             <div className={c.card}>
               <span className={c.label}>Découpe IA</span>
               <p className={ui.hint} style={{ margin: 0 }}>Propose des coupes automatiquement. À vérifier : corrige ensuite à la main.</p>
+              {aiSegOn && !progress && (
+                aiSegConfirm ? (
+                  <div role="alertdialog" aria-label="Envoyer des images à Grok" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <p className={s.msg}>Une soixantaine d'images de cette vidéo vont quitter l'iPad pour être envoyées à Grok (xAI). Ce service peut être payant à l'usage.</p>
+                    <div className={s.actions}><Button variant="primary" onClick={() => void runAiSegments()}>Envoyer les images</Button><Button onClick={() => setAiSegConfirm(false)}>Annuler</Button></div>
+                  </div>
+                ) : (
+                  <Button variant="primary" disabled={!source.durationSec} onClick={() => setAiSegConfirm(true)}>Découper avec l'IA</Button>
+                )
+              )}
+              <span className={c.label} style={{ marginTop: 6 }}>Analyse locale</span>
               <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Changements de plan</span><Switch on={useShots} onChange={setUseShots} label="Changements de plan" /></div>
               <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Bips et silences</span><Switch on={useAudio} onChange={setUseAudio} label="Bips et silences" /></div>
               <div className={s.actions} style={{ justifyContent: 'space-between' }}>

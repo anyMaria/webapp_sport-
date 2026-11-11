@@ -3,6 +3,7 @@ import { APP_NAME } from '../lib/constants'
 import s from '../app/app.module.css'
 
 const ITEMS = [
+  { to: '/import', title: 'Importer une vidéo', hint: 'Fichiers, découpage en exercices' },
   { to: '/bibliotheque', title: "Bibliothèque d'exercices", hint: 'Tes exercices et tes séances' },
   { to: '/mon-rythme', title: 'Mon rythme', hint: 'Série, créneau, séance express' },
   { to: '/collection', title: 'Collection', hint: 'Tes stickers' },

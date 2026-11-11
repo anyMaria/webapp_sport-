@@ -41,3 +41,29 @@ Prépare une vidéo d'au moins 2 minutes. Va sur « Séance de démonstration »
 | 2.15 | Regarde la boucle d'un extrait. | Le retour au début est discret, pas de blocage. |
 
 Déjà vérifié sur ordinateur : 16 tests automatiques du moteur (transitions, bips, pause, « Encore », fin, règle des 80 %). Séance complète jouée dans un navigateur : démarrage, minuteur, vidéo qui avance, « Encore », « Suivant », pause, transition, quitter, journal écrit.
+
+## Phase 3 : import, découpage manuel, bibliothèque, composition
+
+Prépare : trois vidéos TikTok enregistrées sur l'iPad (ou dans Fichiers) et une vidéo longue (5 à 15 minutes).
+
+| # | Action | Résultat attendu |
+|---|---|---|
+| 3.1 | Importer une vidéo : choisis l'origine « TikTok », puis les trois TikTok d'un coup. | Barre de progression par fichier, puis la liste « Vidéos importées ». |
+| 3.2 | Sur chaque TikTok : « Garder la vidéo entière comme un exercice ». | « Enregistré » s'affiche. Les exercices sont dans la bibliothèque avec leur vignette. |
+| 3.3 | Importe la vidéo longue, puis « Découper ». | L'écran de découpage s'ouvre, avec un seul segment couvrant toute la vidéo. |
+| 3.4 | Déplace la poignée de position, touche « Couper ici ». | Le segment se coupe en deux à cet endroit. L'aperçu boucle sur le segment sélectionné. |
+| 3.5 | Boutons − et + de Début et Fin. | Les bornes bougent de 0,5 s, la frontière commune avec le voisin bouge aussi, l'aperçu suit. |
+| 3.6 | « Fusionner avec le suivant ». | Deux segments redeviennent un. |
+| 3.7 | « Gardé » / « Retiré » sur plusieurs segments. | L'étiquette et la frise du bas changent (gardé, retiré). Un segment retiré n'est pas enregistré. |
+| 3.8 | Renomme des segments, saisis une consigne, choisis des zones du corps. | Ces informations se retrouvent dans la bibliothèque. |
+| 3.9 | « Enregistrer N exercices ». | Retour à la bibliothèque, les N exercices sont là avec leur vignette. Temps d'attente raisonnable. |
+| 3.10 | Bibliothèque : recherche, filtre par zone, filtre par vidéo d'origine. | La liste se filtre. Un filtre sans résultat affiche un message clair. |
+| 3.11 | « Nouvelle séance » : ajoute des exercices des quatre vidéos, réordonne avec la poignée (glisser au doigt) et avec les flèches. | L'ordre change. Le glisser fonctionne au doigt sans faire défiler la page. |
+| 3.12 | Règle la durée et le repos d'un exercice. | La durée totale en haut se met à jour. |
+| 3.13 | Enregistre la séance, puis « Lancer ». | La séance mêle les quatre vidéos et se joue de bout en bout, boucle correcte sur chaque extrait. |
+| 3.14 | Dupliquer, renommer, marquer « express », supprimer une séance. | Chaque action fonctionne ; la suppression demande confirmation. |
+| 3.15 | Supprime un exercice utilisé dans une séance, puis lance cette séance. | La séance se joue en sautant l'exercice, et l'écran de départ le signale. |
+| 3.16 | Réglages, « Mes vidéos » : supprime une vidéo. | La confirmation liste les séances touchées. L'espace utilisé baisse. |
+| 3.17 | Ferme complètement l'app, rouvre-la. | Les vidéos, exercices et séances sont toujours là et se lisent. |
+
+Déjà vérifié sur ordinateur : tests automatiques du découpage (couper, fusionner, ajuster, bornes) et des séances (durée, ordre, duplication), parcours complet dans un navigateur (import de deux fichiers, coupe, enregistrement, composition, lancement).

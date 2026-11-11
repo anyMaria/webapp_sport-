@@ -4,6 +4,10 @@ import { Home } from './screens/Home'
 import { Settings } from './screens/Settings'
 import { Soon } from './screens/Soon'
 import { Demo } from './screens/Demo'
+import { Import } from './screens/Import'
+import { Split } from './screens/Split'
+import { Library } from './library/Library'
+import { Composer } from './library/Composer'
 import { SessionScreen } from './player/SessionScreen'
 
 export function App() {
@@ -11,7 +15,10 @@ export function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/reglages" element={<Settings />} />
-      <Route path="/bibliotheque" element={<Soon title="Bibliothèque d'exercices" phase={3} text="Tes exercices et la composition de séances." />} />
+      <Route path="/bibliotheque" element={<Library />} />
+      <Route path="/composer/:id" element={<Composer />} />
+      <Route path="/import" element={<Import />} />
+      <Route path="/decoupage/:sourceId" element={<Split />} />
       <Route path="/mon-rythme" element={<Soon title="Mon rythme" phase={6} text="Ta série, ton créneau et la séance express." />} />
       <Route path="/collection" element={<Soon title="Collection" phase={7} text="Tes stickers et la révélation des pochettes." />} />
       <Route path="/demo" element={<Demo />} />

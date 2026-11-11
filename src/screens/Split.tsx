@@ -366,7 +366,8 @@ function SplitEditor({ source }: { source: VideoSource }) {
   if (error) return <Screen title="Vidéo introuvable"><p className={s.empty}>Cette vidéo n'est plus sur l'iPad.</p></Screen>
 
   const replaceAll = (next: Segment[], note: string) => {
-    const full = renumber(fillGaps(next, duration))
+    // Coupes choisies par elle (rythme, repères) : rien à vérifier.
+    const full = renumber(fillGaps(next, duration)).map((x) => (x.verify ? { ...x, verify: false } : x))
     setSegs(full); setSelId(full[0]?.id ?? ''); setCutSel(null); setNotes([note])
   }
   const resetAll = () => {
@@ -470,7 +471,6 @@ function SplitEditor({ source }: { source: VideoSource }) {
             </div>
             {segs.map((x, i) => (
               <div key={x.id} className={[c.row, !x.kept ? c.rowOff : '', x.id === selId ? c.rowSel : ''].join(' ')} onClick={() => { setCutSel(null); seekTo(x.startSec); setSelId(x.id) }}>
-                <span className={c.rowNo} aria-hidden="true">{i + 1}</span>
                 <div className={c.rowMain}>
                   <input className={c.rowName} value={x.name} aria-label={`Nom de l'exercice ${i + 1}`} onFocus={() => setSelId(x.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(x.id, { name: e.target.value })} />
                   <span className={c.rowTime}>{formatTime(x.startSec)} – {formatTime(x.endSec)} · {Math.round(durationOf(x))} s</span>
@@ -536,7 +536,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
               <div className={c.line}><span>Effort</span><Stepper label="Durée d'effort" value={effort} min={5} max={120} step={5} unit="s" onChange={setEffort} /></div>
               <div className={c.line}><span>Pause</span><Stepper label="Durée de pause" value={rest} min={0} max={60} step={5} unit="s" onChange={setRest} /></div>
               <div className={c.line}><span>Début</span><Stepper label="Début du rythme" value={rhythmStart} min={0} max={Math.max(0, Math.floor(duration) - 5)} step={1} unit="s" onChange={setRhythmStart} /></div>
-              <Button disabled={!duration} onClick={() => setRhythmStart(Math.min(Math.max(0, Math.floor(getTime())), Math.max(0, Math.floor(duration) - 5)))}>Début = là où en est la lecture ({pos.toFixed(0)} s)</Button>
+              <Button disabled={!duration} onClick={() => setRhythmStart(Math.min(Math.max(0, Math.floor(getTime())), Math.max(0, Math.floor(duration) - 5)))}>Début = position de lecture ({pos.toFixed(0)} s)</Button>
               <Button variant="primary" disabled={!duration} onClick={() => replaceAll(mergeCandidates(rhythmBoundaries({ effortSec: effort, restSec: rest, startSec: rhythmStart }, duration, []), duration), 'Rythme régulier appliqué. Ajuste les traits sur la frise si besoin.')}>Appliquer le rythme</Button>
               {notes.map((n) => <p key={n} role="status" className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
             </HelpToggle>
@@ -581,7 +581,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
 
           {sel && (
             <div className={c.card}>
-              <span className={c.label}>Exercice {selIndex + 1} sur {segs.length}</span>
+              <span className={c.label}>Exercice sélectionné</span>
               <div className={c.selInfo}>
                 {!isYT && url && <div className={c.mini}><video ref={mini} src={url} muted playsInline aria-label="Aperçu en boucle de l'exercice sélectionné" /></div>}
                 <div className={c.selText}>

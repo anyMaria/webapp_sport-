@@ -80,11 +80,12 @@ function ComposerEditor({ id, existing, preset }: { id: string; existing?: Worko
     const now = new Date().toISOString()
     const w: Workout = { id: existing?.id ?? newId(), name: name.trim() || 'Séance sans nom', items, isExpress: express, createdAt: existing?.createdAt ?? now, updatedAt: now }
     await db.workouts.put(w)
-    nav('/bibliotheque')
+    // Une nouvelle séance : retour à l'accueil, où elle se lance. Une séance modifiée : retour à la bibliothèque.
+    nav(existing ? '/bibliotheque' : '/')
   }
 
   return (
-    <Screen title={id === 'nouvelle' ? 'Nouvelle séance' : 'Modifier la séance'}>
+    <Screen title={id === 'nouvelle' ? 'Nouvelle séance' : 'Modifier la séance'} subtitle={id === 'nouvelle' ? 'Règle la durée de chaque exercice, puis enregistre.' : undefined} step={id === 'nouvelle' ? 3 : undefined}>
       <div className={c.composer}>
         <section aria-label="Exercices disponibles" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <label className={c.field}>Recherche<input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nom de l'exercice" /></label>
@@ -144,12 +145,12 @@ function ComposerEditor({ id, existing, preset }: { id: string; existing?: Worko
             <div className={c.item}>
               <span className={ui.label}>Ton rythme pour toute la séance</span>
               <div className={c.steppers}>
-                <Stepper label="Durée de chaque exercice" value={bulkDur} min={5} max={300} step={5} unit="s" onChange={setBulkDur} />
-                <Stepper label="Repos après chaque exercice" value={bulkRest} min={0} max={60} step={5} unit="s" onChange={setBulkRest} />
+                <div className={c.stepCol}><span className={c.stepCap}>Durée de chaque exercice</span><Stepper label="Durée de chaque exercice" value={bulkDur} min={5} max={300} step={5} unit="s" onChange={setBulkDur} /></div>
+                <div className={c.stepCol}><span className={c.stepCap}>Repos après chacun</span><Stepper label="Repos après chaque exercice" value={bulkRest} min={0} max={60} step={5} unit="s" onChange={setBulkRest} /></div>
               </div>
               <div className={c.btnRow}>
                 <Button className={c.small} onClick={() => setItems((l) => applyRhythm(l, bulkDur, bulkRest))}>Appliquer à tous</Button>
-                <Button className={c.small} onClick={() => setItems((l) => l.map((i) => { const e = byId.get(i.exerciseId); return e ? { ...i, durationSec: naturalDurationSec(e) } : i }))}>Durée de chaque extrait</Button>
+                <Button className={c.small} onClick={() => setItems((l) => l.map((i) => { const e = byId.get(i.exerciseId); return e ? { ...i, durationSec: naturalDurationSec(e) } : i }))}>Durée d'origine de chaque extrait</Button>
               </div>
             </div>
           )}
@@ -175,16 +176,17 @@ function ComposerEditor({ id, existing, preset }: { id: string; existing?: Worko
                   <IconButton label={`Retirer ${ex?.name ?? 'cet exercice'}`} onClick={() => setItems((l) => l.filter((_, k) => k !== i))}><Trash2 size={20} aria-hidden="true" /></IconButton>
                 </div>
                 <div className={c.steppers}>
-                  <Stepper label="Durée" value={it.durationSec} min={5} max={300} step={5} unit="s" onChange={(v) => patch(i, { durationSec: v })} />
-                  <Stepper label="Repos après" value={it.restAfterSec} min={0} max={60} step={5} unit="s" onChange={(v) => patch(i, { restAfterSec: v })} />
+                  <div className={c.stepCol}><span className={c.stepCap}>Durée</span><Stepper label="Durée" value={it.durationSec} min={5} max={300} step={5} unit="s" onChange={(v) => patch(i, { durationSec: v })} /></div>
+                  <div className={c.stepCol}><span className={c.stepCap}>Repos après</span><Stepper label="Repos après" value={it.restAfterSec} min={0} max={60} step={5} unit="s" onChange={(v) => patch(i, { restAfterSec: v })} /></div>
                 </div>
               </div>
               </div>
             )
           })}
-          <div className={s.actions}>
+          <div className={[s.actions, c.saveBar].join(' ')}>
             <Button variant="primary" disabled={items.length === 0} onClick={() => void save()}>Enregistrer la séance</Button>
-            <Button onClick={() => nav('/bibliotheque')}>Annuler</Button>
+            <Button onClick={() => nav('/bibliotheque')}>{preset ? 'Plus tard' : 'Annuler'}</Button>
+            {preset && <span className={ui.hint}>Tes exercices sont déjà dans la bibliothèque.</span>}
           </div>
         </section>
       </div>

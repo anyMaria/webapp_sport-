@@ -120,17 +120,11 @@ export function Timeline({ segs, duration, pos, selId, cutSel, playing, onSeek, 
           </div>
 
           <div className={c.track} onClick={(e) => { if (duration) { onSelectCut(null); onSeek(timeAt(e.clientX)) } }}>
-            {segs.map((s, i) => {
+            {segs.map((s) => {
               const w = x(s.endSec - s.startSec)
               return (
-                <div
-                  key={s.id}
-                  className={[c.seg, s.kept ? '' : c.segOff, s.id === selId ? c.segSel : ''].join(' ')}
-                  style={{ left: x(s.startSec), width: w }}
-                  aria-hidden="true"
-                >
-                  {w >= 44 && <span className={c.segNo}>{i + 1}</span>}
-                  {w >= 110 && <span className={c.segName}>{s.name}</span>}
+                <div key={s.id} className={[c.seg, s.kept ? '' : c.segOff, s.id === selId ? c.segSel : ''].join(' ')} style={{ left: x(s.startSec), width: w }} aria-hidden="true">
+                  {w >= 64 && <span className={c.segName}>{s.name}</span>}
                 </div>
               )
             })}

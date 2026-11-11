@@ -131,9 +131,17 @@ export function formatTime(sec: number): string {
 
 const isDefaultName = (name: string) => /^Exercice \d+$/.test(name.trim())
 
-/** Après une coupe ou une fusion, les noms laissés par défaut (« Exercice N ») suivent l'ordre ; les noms saisis ne bougent pas. */
+/**
+ * Après une coupe ou une fusion, les noms laissés par défaut (« Exercice N ») suivent l'ordre ; les noms saisis ne bougent pas.
+ * Les « Pause » ne comptent pas : Exercice 1, Pause, Exercice 2.
+ */
 export function renumber(segs: Segment[]): Segment[] {
-  return segs.map((s, i) => (isDefaultName(s.name) && s.name !== defaultName(i) ? { ...s, name: defaultName(i) } : s))
+  let n = 0
+  return segs.map((s) => {
+    if (s.name.trim() === 'Pause') return s
+    const name = defaultName(n++)
+    return isDefaultName(s.name) && s.name !== name ? { ...s, name } : s
+  })
 }
 
 /** Noms par défaut « Exercice N » pour les segments gardés, dans l'ordre, sans toucher aux noms saisis. */

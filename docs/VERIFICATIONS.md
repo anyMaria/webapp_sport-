@@ -178,3 +178,25 @@ Déjà vérifié sur ordinateur : 11 tests automatiques (catalogue de 24 sticker
 Avant d'activer l'IA : je n'ai pas pu lire la documentation d'Anthropic depuis ma session. Le nom du modèle, les limites d'images et l'en-tête de version sont à vérifier, et le coût à chiffrer (le plan l'exige). Rien n'est envoyé à un service tant que ce n'est pas activé.
 
 Déjà vérifié : 18 tests de contraste sur toutes les paires texte/fond, 3 tests de la fonction serveur sans clé, build de production, vérifications des phases précédentes inchangées (123 tests au total).
+
+
+## Phase 13 : interface plus claire, coupes à glisser, IA avec Groq
+
+Vérifié par moi (navigateur d'ordinateur, écran tactile simulé à la taille d'un iPad, faux service d'IA) : parcours complet de l'accueil vide à la séance prête ; glissement d'un trait à la souris et au doigt simulé ; réglage par boutons et au clavier ; zoom ; brouillon repris après rechargement ; repérage IA sur une vidéo de test de 30 s (6 exercices retrouvés aux bons instants, pause du service gérée) ; 193 tests ; construction de production ; fonction serveur compilée aussi avec des réglages non stricts.
+
+Pas vérifié : le vrai service Groq (hors du réseau de ma session), et tout ce qui dépend du doigt et de Safari sur l'iPad.
+
+| # | À faire sur l'iPad | Attendu |
+|---|---|---|
+| 13.1 | Réglages : regarde la version de l'app en bas. | Elle correspond au dernier déploiement. Sinon, ferme complètement l'app et rouvre-la. |
+| 13.2 | Ouvre une vidéo TikTok à découper, iPad en paysage. | La vidéo, « Couper ici » et la frise sont visibles sans faire défiler. |
+| 13.3 | Lance la lecture, touche « Couper ici » deux ou trois fois. | Un trait blanc avec une poignée apparaît à chaque coupe. |
+| 13.4 | Pose le doigt sur un trait et glisse à gauche, à droite. | Le trait suit le doigt, une bulle donne l'instant, la vidéo montre l'image à cet instant. Dis-moi si c'est saccadé ou si le trait est dur à attraper. |
+| 13.5 | Touche un trait sans glisser, puis « +0,1 s », « −1 s », « Retirer la coupe ». | La coupe bouge du pas indiqué, puis disparaît (les deux exercices fusionnent). |
+| 13.6 | Glisse le doigt sur la règle graduée, au-dessus des blocs. | La lecture se déplace dans la vidéo. |
+| 13.7 | Loupe + deux fois, puis glisse le doigt sur les blocs. | La frise est agrandie et défile ; les traits s'attrapent toujours. |
+| 13.8 | « Repérer avec l'IA », puis « Envoyer les images et repérer », sur ta vidéo TikTok de référence. | Une barre avance (« partie 2 sur 6 »…), puis des traits orange apparaissent avec des noms d'exercices. **C'est le vrai test du service** : si un message d'erreur s'affiche, recopie-le-moi tel quel. |
+| 13.9 | Ajuste deux ou trois traits orange, puis « Tout est bon ». | Les traits deviennent blancs. |
+| 13.10 | « Enregistrer N exercices ». | Tu arrives sur « Nouvelle séance », déjà remplie, étape 3. « Enregistrer la séance » te ramène à l'accueil, la séance est là. |
+| 13.11 | Accueil avec une vidéo importée mais pas découpée. | Rubrique « À continuer » avec la vignette et « Découper ». |
+| 13.12 | Vidéo YouTube (lien) : « Marquer ici », glisser un trait. | Même fonctionnement ; le lecteur YouTube suit avec un léger retard, c'est normal. |

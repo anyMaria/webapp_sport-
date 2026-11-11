@@ -6,6 +6,7 @@ import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { importVideoFile, newId } from '../data/importFile'
 import { db } from '../data/db'
+import { useVideoStats } from '../data/useVideoStats'
 import { fetchYouTubeInfo, parseYouTubeId } from '../video/youtube'
 import { VideoItem } from './VideoItem'
 import type { VideoSource } from '../data/types'
@@ -37,11 +38,7 @@ export function Import() {
   const [linkError, setLinkError] = useState<string | null>(null)
 
   const sources = useLiveQuery(() => db.sources.toArray(), []) ?? []
-  const counts = useLiveQuery(async () => {
-    const map: Record<string, number> = {}
-    for (const e of await db.exercises.toArray()) map[e.sourceId] = (map[e.sourceId] ?? 0) + 1
-    return map
-  }, []) ?? {}
+  const { counts, thumbs } = useVideoStats()
   const sorted = sources.filter((x) => fresh.includes(x.id)).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
   const importFiles = async (files: FileList | null, slot: Slot, origin: Origin, note?: string) => {
@@ -65,7 +62,7 @@ export function Import() {
     if (input) input.value = ''
     if (ok) {
       setFresh((f) => [...added, ...f])
-      setInfo(ok === 1 ? 'Vidéo importée. Elle est juste en dessous.' : `${ok} vidéos importées. Elles sont juste en dessous.`)
+      setInfo(ok === 1 ? 'Vidéo importée. Étape suivante : la découper en exercices.' : `${ok} vidéos importées. Étape suivante : les découper en exercices.`)
       window.setTimeout(() => listTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
     }
   }
@@ -80,7 +77,7 @@ export function Import() {
     await db.sources.put(source)
     setLink(''); setYtTitle(''); setLinkError(null)
     setFresh((f) => [source.id, ...f])
-    setInfo('Lien ajouté. Il est juste en dessous.')
+    setInfo('Lien ajouté. Étape suivante : découper la vidéo en exercices.')
     window.setTimeout(() => listTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
   }
 
@@ -92,7 +89,7 @@ export function Import() {
   )
 
   return (
-    <Screen title="Importer une vidéo" subtitle="Choisis d'où vient ta vidéo. Les fichiers restent sur cet iPad.">
+    <Screen title="Importer une vidéo" subtitle="Choisis d'où vient ta vidéo. Les fichiers restent sur cet iPad." step={1}>
       <div className={c.sources}>
         <Card title="Réseaux sociaux">
           <div className={s.actions} role="group" aria-label="Réseau social">
@@ -105,7 +102,7 @@ export function Import() {
         </Card>
 
         <Card title="YouTube">
-          <p className={s.empty}>Un lien se lit dans le lecteur YouTube, avec une connexion. Un fichier que tu as déjà se découpe automatiquement.</p>
+          <p className={s.empty}>Un lien se lit dans le lecteur YouTube, avec une connexion. Si tu as déjà le fichier de la vidéo, tu peux le choisir : l'IA pourra alors t'aider à le découper.</p>
           <label className={c.field}>Lien de la vidéo
             <input value={link} onChange={(e) => { setLink(e.target.value); setLinkError(null) }} placeholder="https://youtu.be/…" inputMode="url" />
           </label>
@@ -143,7 +140,7 @@ export function Import() {
           <Card title={`Importées maintenant · ${sorted.length}`}>
             <div className={c.list}>
               {sorted.map((src) => (
-                <VideoItem key={src.id} src={src} exerciseCount={counts[src.id] ?? 0} fresh onDeleted={(id) => setFresh((f) => f.filter((x) => x !== id))} />
+                <VideoItem key={src.id} src={src} exerciseCount={counts[src.id] ?? 0} thumbId={thumbs[src.id]} fresh onDeleted={(id) => setFresh((f) => f.filter((x) => x !== id))} />
               ))}
             </div>
             <div className={s.actions}><Button onClick={() => nav('/videos')}>Voir toutes mes vidéos</Button></div>

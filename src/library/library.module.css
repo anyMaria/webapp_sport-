@@ -29,3 +29,7 @@
 .pickRow { display: flex; align-items: center; gap: 12px; min-height: var(--touch); padding: 4px 8px; border-radius: var(--radius-s); background: var(--surface-2); cursor: pointer; }
 .pickRow input { width: 26px; height: 26px; accent-color: var(--effort); flex-shrink: 0; }
 .groupHead { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 4px 0; }
+.stepCol { display: flex; flex-direction: column; gap: 2px; }
+.stepCap { font-size: 13px; font-weight: 600; color: var(--text-muted); padding-left: 4px; }
+/* Le bouton d'enregistrement reste visible en bas de l'écran, même avec une longue séance. */
+.saveBar { position: sticky; bottom: 0; padding: 12px 0; background: var(--bg); z-index: 1; }

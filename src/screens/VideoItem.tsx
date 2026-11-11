@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Scissors } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { db } from '../data/db'
 import { deleteSourceRecords, workoutsUsingSource } from '../data/sources'
@@ -7,6 +8,7 @@ import { removeVideoFile, formatBytes } from '../data/opfs'
 import { saveSegments } from '../import/saveExercises'
 import { formatTime, wholeVideo } from '../import/segments'
 import { originText, type VideoSource } from '../data/types'
+import { Thumb } from '../library/Thumb'
 import s from '../app/app.module.css'
 import c from './importScreen.module.css'
 
@@ -32,8 +34,8 @@ function NameField({ source }: { source: VideoSource }) {
   )
 }
 
-/** Une vidéo : nom modifiable, état (brouillon, découpée), découper, supprimer. */
-export function VideoItem({ src, exerciseCount, fresh = false, onDeleted }: { src: VideoSource; exerciseCount: number; fresh?: boolean; onDeleted?: (id: string) => void }) {
+/** Une vidéo : vignette, nom modifiable, état (brouillon, découpée), et l'étape suivante en bouton principal. */
+export function VideoItem({ src, exerciseCount, thumbId, fresh = false, onDeleted }: { src: VideoSource; exerciseCount: number; thumbId?: string; fresh?: boolean; onDeleted?: (id: string) => void }) {
   const nav = useNavigate()
   const [toDelete, setToDelete] = useState<string[] | null>(null)
   const n = exerciseCount
@@ -51,32 +53,35 @@ export function VideoItem({ src, exerciseCount, fresh = false, onDeleted }: { sr
 
   return (
     <div className={[c.item, fresh ? c.fresh : ''].join(' ')}>
-      <div className={c.itemHead}>
-        <NameField source={src} />
-        {fresh && <span className={c.badge}>Nouvelle</span>}
-        {draft && <span className={c.badge}>Brouillon</span>}
-      </div>
-      <span className={c.meta}>{meta} · {state}</span>
-      {toDelete ? (
-        <div role="alertdialog" aria-label="Supprimer la vidéo" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <p className={s.msg}>
-            Supprimer « {src.title} » et ses exercices ?
-            {toDelete.length > 0 && ` Séances touchées : ${toDelete.join(', ')}.`}
-          </p>
-          <div className={s.actions}>
-            <Button variant="danger" onClick={() => void confirmDelete()}>Supprimer</Button>
-            <Button onClick={() => setToDelete(null)}>Annuler</Button>
+      <Thumb id={src.thumbId ?? thumbId} youtubeId={src.youtubeId} className={c.thumb} />
+      <div className={c.itemBody}>
+        <div className={c.itemHead}>
+          <NameField source={src} />
+          {fresh && <span className={c.badge}>Nouvelle</span>}
+          {draft && <span className={c.badge}>Brouillon</span>}
+        </div>
+        <span className={c.meta}>{meta} · {state}</span>
+        {toDelete ? (
+          <div role="alertdialog" aria-label="Supprimer la vidéo" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <p className={s.msg}>
+              Supprimer « {src.title} » et ses exercices ?
+              {toDelete.length > 0 && ` Séances touchées : ${toDelete.join(', ')}.`}
+            </p>
+            <div className={s.actions}>
+              <Button variant="danger" onClick={() => void confirmDelete()}>Supprimer</Button>
+              <Button onClick={() => setToDelete(null)}>Annuler</Button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className={s.actions}>
-          {n === 0 && short && !draft && <Button variant="primary" onClick={() => void saveSegments(src, wholeVideo(src.durationSec, src.title))}>Garder la vidéo entière</Button>}
-          {n === 0 && <Button variant={short && !draft ? 'secondary' : 'primary'} onClick={() => nav(`/decoupage/${src.id}`)}>{draft ? 'Reprendre le découpage' : 'Découper'}</Button>}
-          {n > 0 && <Button variant="primary" onClick={() => nav(`/composer/nouvelle?video=${src.id}`)}>Créer une séance</Button>}
-          {n > 0 && <Button onClick={() => nav('/bibliotheque')}>Voir les exercices</Button>}
-          <Button variant="danger" onClick={() => void askDelete()}>Supprimer</Button>
-        </div>
-      )}
+        ) : (
+          <div className={s.actions}>
+            {n === 0 && <Button variant="primary" onClick={() => nav(`/decoupage/${src.id}`)}><Scissors size={18} aria-hidden="true" />{draft ? 'Reprendre le découpage' : 'Découper en exercices'}</Button>}
+            {n === 0 && short && !draft && <Button onClick={() => void saveSegments(src, wholeVideo(src.durationSec, src.title))}>Garder la vidéo entière</Button>}
+            {n > 0 && <Button variant="primary" onClick={() => nav(`/composer/nouvelle?video=${src.id}`)}>Créer une séance</Button>}
+            {n > 0 && <Button onClick={() => nav('/bibliotheque')}>Voir les exercices</Button>}
+            <Button variant="danger" className={c.del} onClick={() => void askDelete()}>Supprimer</Button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

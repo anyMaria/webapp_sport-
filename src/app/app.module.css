@@ -1,5 +1,6 @@
 .screen { max-width: 1180px; margin: 0 auto; padding: 36px 36px 64px; display: flex; flex-direction: column; gap: 24px; min-height: 100dvh; }
-.head { display: flex; align-items: center; gap: 16px; }
+.head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.headSteps { margin-left: auto; }
 .head h1 { font-size: 30px; line-height: 1.1; }
 .sub { margin: 2px 0 0; font-size: 15px; color: var(--text-muted); }
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }

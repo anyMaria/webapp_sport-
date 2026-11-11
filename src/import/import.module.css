@@ -58,8 +58,6 @@
 .speed { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: var(--radius-m); background: var(--surface); }
 .speed strong { min-width: 56px; text-align: center; font-family: var(--font-title); font-size: 18px; font-variant-numeric: tabular-nums; }
 .line { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.rowNo { flex-shrink: 0; width: 30px; height: 30px; border-radius: 15px; background: var(--bg-deep); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-family: var(--font-title); font-weight: 600; font-size: 14px; }
-.rowSel .rowNo { background: var(--transition); color: var(--on-accent); }
 input.rowName { background: transparent; border: none; color: inherit; font: inherit; font-weight: 600; font-size: 16px; padding: 0; min-height: 28px; width: 100%; }
 .field textarea { border-radius: var(--radius-s); border: 2px solid var(--border); background: var(--bg-deep); padding: 10px 12px; color: var(--text); font: inherit; }
 .field input { color: var(--text); width: 100%; }
@@ -93,12 +91,11 @@ input.rowName { background: transparent; border: none; color: inherit; font: inh
 .tick { position: absolute; bottom: 0; height: 22px; padding-left: 6px; border-left: 2px solid var(--border); font-size: 13px; line-height: 14px; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
 .knob { position: absolute; top: 6px; width: 22px; height: 22px; margin-left: -11px; border-radius: 11px; background: var(--text); pointer-events: none; }
 .track { position: relative; height: 76px; touch-action: pan-x; cursor: pointer; -webkit-user-select: none; user-select: none; }
-.seg { position: absolute; top: 10px; bottom: 10px; background: var(--effort); color: var(--on-accent); border-radius: 8px; box-shadow: inset 0 0 0 2px var(--bg-deep); display: flex; align-items: center; gap: 8px; padding: 0 12px; overflow: hidden; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.seg { position: absolute; top: 10px; bottom: 10px; background: var(--effort); color: var(--on-accent); border-radius: 8px; box-shadow: inset 0 0 0 2px var(--bg-deep); display: flex; align-items: center; padding: 0 16px; overflow: hidden; font-size: 14px; font-weight: 600; white-space: nowrap; }
 .segOff { background: var(--line); color: var(--text-muted); }
 .segSel { top: 5px; bottom: 5px; box-shadow: inset 0 0 0 3px var(--text); }
-.segNo { font-family: var(--font-title); opacity: 0.75; }
 .segName { overflow: hidden; text-overflow: ellipsis; }
-.cutZone { position: absolute; top: 0; bottom: 0; padding: 0; border: none; background: transparent; cursor: ew-resize; touch-action: none; z-index: 2; }
+.cutZone { position: absolute; top: 0; bottom: 0; padding: 0; border: none; background: transparent; cursor: ew-resize; touch-action: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; z-index: 2; }
 .cutZone:active { transform: none; }
 .cutZone:focus-visible { outline: 3px solid var(--text); outline-offset: -3px; border-radius: 8px; }
 .cutLine { position: absolute; top: 0; bottom: 0; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--text); box-shadow: 0 0 0 2px var(--bg-deep); }

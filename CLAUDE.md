@@ -31,4 +31,4 @@ PWA personnelle (iPad, Safari, mode installé) qui transforme des vidéos d'exer
 
 ## Dépôt
 - Dépôt GitHub : anyMaria/webapp_sport- (le nom se termine par un tiret).
-- Branche de travail de cette session : `claude/clever-johnson-orkto7` (le plan parle de `main` : fusion à faire par l'utilisatrice).
+- Branche de travail : celle indiquée par la session en cours (le plan parle de `main` : fusion à faire par l'utilisatrice).

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check, Dumbbell, Flame, Play, Plus, Film } from 'lucide-react'
+import { Check, Dumbbell, Flame, Play, Plus, Film, Scissors } from 'lucide-react'
 import { db } from '../data/db'
 import { Thumb } from '../library/Thumb'
 import { formatDuration, workoutDurationSec } from '../library/workouts'
@@ -12,6 +12,7 @@ import { weekDays, weekStatusLine } from '../motivation/streak'
 import { streakMessage, useMotivation } from '../motivation/useMotivation'
 import { originText, type Exercise, type VideoSource, type Workout } from '../data/types'
 import { APP_NAME } from '../lib/constants'
+import { useVideoStats } from '../data/useVideoStats'
 import h from './home.module.css'
 
 const DAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
@@ -27,6 +28,8 @@ export function Home() {
   const countedTotal = (useLiveQuery(() => db.sessionLogs.toArray(), []) ?? []).filter((l) => l.counted).length
   const untilPouch = sessionsUntilNextPouch(countedTotal)
   const unrevealed = (useLiveQuery(() => db.stickerUnlocks.toArray(), []) ?? []).filter((u) => !u.revealed).length
+
+  const { counts, thumbs } = useVideoStats()
 
   const exById = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises])
   const srcById = useMemo(() => new Map(sources.map((s) => [s.id, s])), [sources])
@@ -52,6 +55,23 @@ export function Home() {
   const days = weekDays(result.current, now, settings.slot.days)
   const pct = Math.min(100, Math.round((result.current.count / settings.weeklyGoal) * 100))
 
+  // À continuer : vidéos pas encore découpées (ou en cours), puis vidéos découpées qui ne sont dans aucune séance.
+  const inWorkouts = new Set(workouts.flatMap((w) => w.items.map((i) => exById.get(i.exerciseId)?.sourceId)))
+  const recent = [...sources].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const toCut = recent.filter((v) => !counts[v.id])
+  const toCompose = recent.filter((v) => counts[v.id] && !inWorkouts.has(v.id))
+  const pending = [
+    ...toCut.map((v) => ({ v, state: v.draftSegs ? 'Découpage commencé' : 'À découper', label: v.draftSegs ? 'Reprendre' : 'Découper', to: `/decoupage/${v.id}`, cut: true })),
+    ...toCompose.map((v) => ({ v, state: `${counts[v.id]} exercice${counts[v.id]! > 1 ? 's' : ''}, pas encore dans une séance`, label: 'Créer une séance', to: `/composer/nouvelle?video=${v.id}`, cut: false })),
+  ]
+  // Premiers pas : où en est-elle des trois étapes ?
+  const firstStep = sources.length === 0 ? 1 : exercises.length === 0 ? 2 : 3
+  const firstSteps = [
+    { title: 'Importe une vidéo', text: 'Un TikTok enregistré, un lien YouTube ou un fichier. Tout reste sur cet iPad.', label: 'Importer une vidéo', to: '/import' },
+    { title: 'Découpe-la en exercices', text: "À la main, ou avec l'aide de l'IA qui pose les coupes pour toi.", label: toCut[0] ? `Découper « ${toCut[0].title} »` : 'Voir mes vidéos', to: toCut[0] ? `/decoupage/${toCut[0].id}` : '/videos' },
+    { title: 'Crée ta séance', text: 'Choisis tes exercices et la durée de chacun.', label: 'Créer ma séance', to: toCompose[0] ? `/composer/nouvelle?video=${toCompose[0].id}` : '/composer/nouvelle' },
+  ]
+
   const originsOf = (w: Workout) => [...new Set(w.items.map((i) => { const src = srcById.get(exById.get(i.exerciseId)?.sourceId ?? ''); return src ? originText(src) : undefined }).filter(Boolean))] as string[]
 
   return (
@@ -74,9 +94,23 @@ export function Home() {
 
       {workouts.length === 0 ? (
         <section className={h.empty} aria-label="Premiers pas">
-          <h2 style={{ fontSize: 28 }}>Bienvenue dans {APP_NAME}</h2>
-          <p className={h.hint} style={{ fontSize: 16, margin: 0 }}>Importe une vidéo d'exercices, découpe-la, puis compose ta première séance. Tout reste sur cet iPad.</p>
-          <div><Link to="/import" className={h.pill} style={{ background: 'var(--effort)', color: 'var(--on-accent)', display: 'inline-flex' }}>Importer une vidéo</Link></div>
+          <div>
+            <h2 style={{ fontSize: 28 }}>Bienvenue dans {APP_NAME}</h2>
+            <p className={h.hint} style={{ fontSize: 16, margin: '4px 0 0' }}>Trois étapes pour ta première séance.</p>
+          </div>
+          <ol className={h.firstSteps}>
+            {firstSteps.map((st, i) => {
+              const n = i + 1
+              return (
+                <li key={st.title} className={[h.firstStep, n === firstStep ? h.firstNow : n < firstStep ? h.firstDone : ''].join(' ')} aria-current={n === firstStep ? 'step' : undefined}>
+                  <span className={h.firstNum} aria-hidden="true">{n < firstStep ? <Check size={20} strokeWidth={3} /> : n}</span>
+                  <strong>{st.title}{n < firstStep && <span className={h.srOnly}> (fait)</span>}</strong>
+                  <span className={h.hint}>{st.text}</span>
+                  {n === firstStep && <Link to={st.to} className={h.firstGo}>{st.label}</Link>}
+                </li>
+              )
+            })}
+          </ol>
         </section>
       ) : (
         <section className={h.hero}>
@@ -118,6 +152,27 @@ export function Home() {
               <div className={h.track} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progression de la semaine"><div className={h.fill} style={{ width: `${pct}%` }} /></div>
               <span className={h.hint}>{weekStatusLine(result.current, settings.minInApp)} {untilPouch === 1 ? 'Ta prochaine pochette : à la prochaine séance !' : `Prochaine pochette dans ${untilPouch} séances`}</span>
             </div>
+          </div>
+        </section>
+      )}
+
+      {pending.length > 0 && !(workouts.length === 0 && pending.length === 1) && (
+        <section aria-labelledby="a-continuer" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className={h.sectionHead}>
+            <h2 id="a-continuer">À continuer</h2>
+            {pending.length > 3 && <Link to="/videos" className={h.link}>Toutes mes vidéos</Link>}
+          </div>
+          <div className={h.pending}>
+            {pending.slice(0, 3).map(({ v, state, label, to, cut }) => (
+              <article key={v.id} className={h.pendItem}>
+                <Thumb id={v.thumbId ?? thumbs[v.id]} youtubeId={v.youtubeId} className={h.pendThumb} />
+                <div className={h.pendText}>
+                  <strong>{v.title}</strong>
+                  <span className={h.hint}>{state}</span>
+                </div>
+                <Link to={to} className={h.pendGo}>{cut && <Scissors size={18} aria-hidden="true" />}{label}</Link>
+              </article>
+            ))}
           </div>
         </section>
       )}

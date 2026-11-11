@@ -2,12 +2,15 @@
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--text-muted); }
 .field input { min-height: var(--touch); border-radius: var(--radius-s); border: 2px solid var(--border); background: var(--bg-deep); padding: 0 12px; color: var(--text); }
 .list { display: flex; flex-direction: column; gap: 14px; }
-.item { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: var(--radius-m); background: var(--surface-2); border: 2px solid transparent; transition: border-color 300ms; }
+.item { display: flex; gap: 16px; align-items: flex-start; padding: 16px; border-radius: var(--radius-m); background: var(--surface-2); border: 2px solid transparent; transition: border-color 300ms; }
 .fresh { border-color: var(--effort); }
+.itemBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.thumb { width: 96px; height: 96px; flex-shrink: 0; border-radius: var(--radius-s); background: var(--bg-deep); object-fit: cover; }
+.del { margin-left: auto; }
 .itemHead { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .name { flex: 1; min-width: 200px; min-height: var(--touch); border-radius: var(--radius-s); border: 2px solid var(--border); background: var(--bg-deep); padding: 0 12px; color: var(--text); font-weight: 600; font-size: 17px; }
 .meta { color: var(--text-muted); font-size: 14px; }
 .badge { padding: 4px 10px; border-radius: var(--radius-s); background: var(--bg-deep); color: var(--effort); font-size: 13px; font-weight: 600; }
 .sep { height: 1px; background: var(--line); border: 0; margin: 4px 0; }
-@media (max-width: 900px) { .sources { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .sources { grid-template-columns: 1fr; } .thumb { width: 64px; height: 64px; } }
 .importLink { display: inline-flex; align-items: center; min-height: 64px; padding: 0 28px; border-radius: 32px; background: var(--effort); color: var(--on-accent); font-family: var(--font-title); font-weight: 600; font-size: 18px; text-decoration: none; }

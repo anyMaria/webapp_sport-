@@ -13,6 +13,7 @@ export interface VideoSource {
   sizeBytes?: number // kind = "file"
   youtubeId?: string // kind = "youtube"
   author?: string // créateur de la vidéo YouTube
+  thumbId?: string // vignette de la vidéo (fichiers), pour la reconnaître dans les listes
   /** Découpage en cours, enregistré tout seul (brouillon). Effacé à l'enregistrement des exercices. */
   draftSegs?: Segment[]
   createdAt: string

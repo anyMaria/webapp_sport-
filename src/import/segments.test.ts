@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { adjust, fillGaps, mergeWithNext, moveBoundary, splitAt, wholeVideo, type Segment } from './segments'
+import { adjust, fillGaps, mergeWithNext, moveBoundary, renumber, splitAt, wholeVideo, type Segment } from './segments'
 
 const seg = (id: string, startSec: number, endSec: number, extra: Partial<Segment> = {}): Segment => ({ id, startSec, endSec, name: id, cue: '', tags: [], kept: true, ...extra })
 
@@ -86,5 +86,17 @@ describe('coupes à déplacer et segments jointifs', () => {
   })
   it('sans segment utilisable : la vidéo entière', () => {
     expect(fillGaps([], 12).map((x) => [x.startSec, x.endSec])).toEqual([[0, 12]])
+  })
+})
+
+describe('noms par défaut', () => {
+  const named = (name: string, i: number): Segment => ({ id: `n${i}`, startSec: i * 10, endSec: i * 10 + 10, name, cue: '', tags: [], kept: true })
+  it('une coupe dans « Exercice N » ne donne pas « (suite) », un nom saisi si', () => {
+    expect(splitAt([named('Exercice 1', 0)], 'n0', 5).map((x) => x.name)).toEqual(['Exercice 1', 'Exercice 1'])
+    expect(splitAt([named('Pont', 0)], 'n0', 5).map((x) => x.name)).toEqual(['Pont', 'Pont (suite)'])
+  })
+  it('renumérote les noms par défaut dans l\'ordre, sans compter les pauses ni toucher aux noms saisis', () => {
+    const r = renumber(['Exercice 1', 'Exercice 1', 'Pause', 'Pont', 'Exercice 9'].map(named))
+    expect(r.map((x) => x.name)).toEqual(['Exercice 1', 'Exercice 2', 'Pause', 'Pont', 'Exercice 4'])
   })
 })

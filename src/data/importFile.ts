@@ -60,9 +60,18 @@ export async function importVideoFile(file: File, originLabel: VideoSource['orig
     await removeVideoFile(opfsPath)
     throw new Error(friendlyWriteError(e), { cause: e })
   }
+  // Vignette pour reconnaître la vidéo dans les listes. Un échec ne bloque pas l'import.
+  let thumbId: string | undefined
+  try {
+    const blob = await makeThumb(file, Math.min(1, meta.durationSec / 2))
+    thumbId = newId()
+    await db.thumbs.put({ id: thumbId, blob })
+  } catch {
+    thumbId = undefined
+  }
   const source: VideoSource = {
     id, kind: 'file', title: file.name.replace(/\.[^.]+$/, ''), durationSec: meta.durationSec,
-    originLabel, originNote: originNote?.trim() || undefined, opfsPath, sizeBytes: file.size, createdAt: new Date().toISOString(),
+    originLabel, originNote: originNote?.trim() || undefined, opfsPath, sizeBytes: file.size, thumbId, createdAt: new Date().toISOString(),
   }
   await db.sources.put(source)
   return source

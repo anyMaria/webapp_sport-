@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import handler, { parseFound, parseLabels, pickVisionModel } from '../api/ai'
+import handler, { parseFound, parseLabels, pickVisionModel, whyEmpty } from '../api/ai'
 
 function call(method: string, body?: unknown, query?: Record<string, string>) {
   let status = 0
@@ -33,5 +33,13 @@ describe('lecture des réponses', () => {
   })
   it('noms : ignore les identifiants inconnus', () => {
     expect(parseLabels('[{"id":"a","name":"Pont","cue":"x"},{"id":"zz","name":"Autre"}]', ['a'])).toEqual([{ id: 'a', name: 'Pont', cue: 'x' }])
+  })
+})
+
+describe('explication d\'une réponse vide', () => {
+  it('réponse coupée, réponse en texte, silence', () => {
+    expect(whyEmpty({ text: '<think>long</think>', finish: 'length' })).toContain('trop réfléchi')
+    expect(whyEmpty({ text: 'Je ne vois pas d\'exercice.', finish: 'stop' })).toBe("Réponse du modèle : « Je ne vois pas d'exercice. »")
+    expect(whyEmpty({ text: '', finish: 'stop' })).toContain('rien répondu')
   })
 })

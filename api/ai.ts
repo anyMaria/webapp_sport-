@@ -71,24 +71,35 @@ type Part = { type: 'text'; text: string } | { type: 'image_url'; image_url: { u
 const jpeg = (b64: string): Part => ({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${b64}` } })
 const b64ok = (s: unknown): s is string => typeof s === 'string' && s.length > 0 && s.length <= MAX_IMAGE_CHARS && /^[A-Za-z0-9+/=]+$/.test(s)
 
-interface Answer { ok: boolean; text: string; error: string }
+interface Answer { ok: boolean; text: string; error: string; finish: string }
 async function ask(k: string, base: string, mdl: string, content: Part[], maxTokens: number): Promise<Answer> {
+  const call = (extra: Record<string, unknown>) => fetch(`${base}/chat/completions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${k}` },
+    body: JSON.stringify({ model: mdl, max_tokens: maxTokens, temperature: 0.2, messages: [{ role: 'user', content }], ...extra }),
+  })
   try {
-    const r = await fetch(`${base}/chat/completions`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${k}` },
-      body: JSON.stringify({ model: mdl, max_tokens: maxTokens, temperature: 0.2, messages: [{ role: 'user', content }] }),
-    })
+    // Les modèles qui « réfléchissent » peuvent épuiser leur réponse en raisonnement : on essaie d'abord sans raisonnement,
+    // puis sans ce réglage si le modèle ne le connaît pas.
+    let r = await call({ reasoning_effort: 'none' })
+    if (r.status === 400) r = await call({})
     if (!r.ok) {
       const j = (await r.json().catch(() => ({}))) as { error?: { message?: string } | string }
       const msg = typeof j.error === 'string' ? j.error : j.error?.message
-      return { ok: false, text: '', error: `Le service d'IA a refusé la demande (code ${r.status})${msg ? ` : ${msg.slice(0, 200)}` : ''}.` }
+      return { ok: false, text: '', finish: '', error: `Le service d'IA a refusé la demande (code ${r.status})${msg ? ` : ${msg.slice(0, 200)}` : ''}.` }
     }
-    const data = (await r.json()) as { choices?: { message?: { content?: string } }[] }
-    return { ok: true, text: data.choices?.[0]?.message?.content ?? '', error: '' }
+    const data = (await r.json()) as { choices?: { message?: { content?: string }; finish_reason?: string }[] }
+    return { ok: true, text: data.choices?.[0]?.message?.content ?? '', finish: data.choices?.[0]?.finish_reason ?? '', error: '' }
   } catch {
-    return { ok: false, text: '', error: "Le service d'IA est injoignable." }
+    return { ok: false, text: '', finish: '', error: "Le service d'IA est injoignable." }
   }
+}
+
+/** Explication quand rien d'exploitable n'est revenu : réponse tronquée, ou début de ce que le modèle a répondu. */
+export function whyEmpty(r: { text: string; finish: string }): string {
+  if (r.finish === 'length') return 'La réponse a été coupée : le modèle a trop réfléchi avant de répondre.'
+  const t = answerOf(r.text).replace(/\s+/g, ' ').trim()
+  return t ? `Réponse du modèle : « ${t.slice(0, 300)} »` : 'Le modèle n\'a rien répondu.'
 }
 
 export interface Found { start: number; end: number; name: string; cue: string }
@@ -195,7 +206,9 @@ export default async function handler(req: Req, res: Res): Promise<void> {
       content.push(jpeg(s.image))
     })
     const r = await ask(k, p.base, mdl, content, 6000)
-    return r.ok ? res.status(200).json({ exercises: parseFound(r.text, body.duration) }) : res.status(502).json({ error: r.error })
+    if (!r.ok) return res.status(502).json({ error: r.error })
+    const exercises = parseFound(r.text, body.duration)
+    return res.status(200).json({ exercises, note: exercises.length ? undefined : whyEmpty(r) })
   }
   if (task === 'labels') {
     const segs = parseLabelsBody(req.body)

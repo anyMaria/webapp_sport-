@@ -60,9 +60,9 @@ export async function sampleSheets(file: Blob, durationSec: number, signal: Abor
   }
 }
 
-export async function requestSegments(sheets: Sheet[], durationSec: number, signal: AbortSignal): Promise<Found[]> {
-  const body = await aiPost<{ exercises?: Found[] }>({ task: 'segments', sheets, duration: durationSec }, signal)
-  return body.exercises ?? []
+export async function requestSegments(sheets: Sheet[], durationSec: number, signal: AbortSignal): Promise<{ exercises: Found[]; note?: string }> {
+  const body = await aiPost<{ exercises?: Found[]; note?: string }>({ task: 'segments', sheets, duration: durationSec }, signal)
+  return { exercises: body.exercises ?? [], note: body.note }
 }
 
 const round = (n: number) => Math.round(n * 10) / 10

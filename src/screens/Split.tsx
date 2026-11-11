@@ -14,10 +14,8 @@ import { createYTPlayer, fetchYouTubeChapters, youtubeChaptersEnabled, type YTPl
 import { parseChapters } from '../import/chapters'
 import { rhythmBoundaries } from '../import/detect/rhythm'
 import { mergeCandidates } from '../import/detect/merge'
-import { Switch } from '../ui/Switch'
 import { Timeline } from '../import/Timeline'
 import { Stepper } from '../ui/Stepper'
-import { analyzeVideo } from '../import/detect/analyze'
 import { getVideoFile } from '../data/opfs'
 import { aiStatus, type AiStatus } from '../import/aiClient'
 import { buildSegments, requestSegments, sampleSheets } from '../import/aiSegments'
@@ -68,9 +66,6 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [confirmReset, setConfirmReset] = useState(false)
   const [chaptersOn, setChaptersOn] = useState(false)
   const [chaptersBusy, setChaptersBusy] = useState(false)
-  const [useShots, setUseShots] = useState(true)
-  const [useAudio, setUseAudio] = useState(true)
-  const [useRhythm, setUseRhythm] = useState(false)
   const [effort, setEffort] = useState(30)
   const [rest, setRest] = useState(10)
   const [rhythmStart, setRhythmStart] = useState(0)
@@ -86,32 +81,6 @@ function SplitEditor({ source }: { source: VideoSource }) {
   const [aiSegConfirm, setAiSegConfirm] = useState(false)
   useEffect(() => { void aiStatus().then((st) => { setAiInfo(st); setAiOn(st.enabled && source.kind === 'file') }) }, [source.kind])
   const abort = useRef<AbortController | null>(null)
-
-  const analyze = async () => {
-    if (!source.opfsPath) return
-    const ctl = new AbortController()
-    abort.current = ctl
-    setNotes([])
-    setProgress({ label: 'Préparation', ratio: null })
-    try {
-      const file = await getVideoFile(source.opfsPath)
-      const r = await analyzeVideo(file, source.durationSec, { shots: useShots, audio: useAudio, rhythm: useRhythm ? { effortSec: effort, restSec: rest, startSec: rhythmStart } : null }, (label, ratio) => setProgress({ label, ratio }), ctl.signal)
-      setSegs(r.segments)
-      setSelId(r.segments[0]?.id ?? '')
-      setNotes(r.notes)
-    } catch (e) {
-      // Annulation : on garde les segments actuels. Autre échec : un seul segment à couper à la main.
-      if ((e as Error).name !== 'AbortError') {
-        const w = wholeVideo(source.durationSec)
-        setSegs(w)
-        setSelId(w[0]!.id)
-        setNotes([`L'analyse a échoué (${(e as Error).message}). Coupe la vidéo à la main.`])
-      }
-    } finally {
-      setProgress(null)
-      abort.current = null
-    }
-  }
 
   // Brouillon : le découpage en cours s'enregistre tout seul.
   const firstRun = useRef(true)
@@ -258,9 +227,9 @@ function SplitEditor({ source }: { source: VideoSource }) {
       const file = await getVideoFile(source.opfsPath)
       const sheets = await sampleSheets(file, source.durationSec, ctl.signal, (ratio) => setProgress({ label: 'Images de la vidéo', ratio }))
       setProgress({ label: 'Réflexion de l\'IA', ratio: null })
-      const found = await requestSegments(sheets, source.durationSec, ctl.signal)
+      const { exercises: found, note } = await requestSegments(sheets, source.durationSec, ctl.signal)
       const next = buildSegments(found, source.durationSec)
-      if (!next.some((x) => x.kept)) setNotes(["L'IA n'a repéré aucun exercice. Coupe à la main."])
+      if (!next.some((x) => x.kept)) setNotes(["L'IA n'a repéré aucun exercice.", ...(note ? [note] : []), 'Coupe à la main, ou essaie « Rythme régulier ».'])
       else {
         setSegs(next); setSelId(next.find((x) => x.kept)?.id ?? next[0]!.id)
         setNotes([`${next.filter((x) => x.kept).length} exercices proposés. Les coupes sont approximatives (à quelques secondes près) : vérifie-les dans « Coupes manuelles ».`])
@@ -522,7 +491,7 @@ function SplitEditor({ source }: { source: VideoSource }) {
           {!isYT && mode === 'ai' && (
             <div className={c.card}>
               <span className={c.label}>Découpe IA</span>
-              <p className={ui.hint} style={{ margin: 0 }}>Propose des coupes automatiquement. À vérifier : corrige ensuite à la main.</p>
+              <p className={ui.hint} style={{ margin: 0 }}>Une IA regarde des images de la vidéo et propose les coupes. Les coupes sont approximatives : vérifie-les et corrige-les dans « Coupes manuelles ».</p>
               {aiInfo === null && <p className={ui.hint} style={{ margin: 0 }}>Vérification du service d'IA…</p>}
               {aiInfo !== null && !aiSegOn && (
                 <p role="status" className={ui.hint} style={{ margin: 0, color: 'var(--transition)' }}>
@@ -539,30 +508,12 @@ function SplitEditor({ source }: { source: VideoSource }) {
                   <Button variant="primary" disabled={!source.durationSec} onClick={() => setAiSegConfirm(true)}>Découper avec l'IA</Button>
                 )
               )}
-              <span className={c.label} style={{ marginTop: 6 }}>Analyse locale</span>
-              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Changements de plan</span><Switch on={useShots} onChange={setUseShots} label="Changements de plan" /></div>
-              <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Bips et silences</span><Switch on={useAudio} onChange={setUseAudio} label="Bips et silences" /></div>
-              <div className={s.actions} style={{ justifyContent: 'space-between' }}>
-                <span>Rythme régulier<br /><span className={ui.hint}>{effort} s d'effort, {rest} s de pause</span></span>
-                <Switch on={useRhythm} onChange={setUseRhythm} label="Rythme régulier" />
-              </div>
-              {useRhythm && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Effort</span><Stepper label="Durée d'effort" value={effort} min={5} max={120} step={5} unit="s" onChange={setEffort} /></div>
-                  <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Pause</span><Stepper label="Durée de pause" value={rest} min={0} max={60} step={5} unit="s" onChange={setRest} /></div>
-                  <div className={s.actions} style={{ justifyContent: 'space-between' }}><span>Premier exercice à</span><Stepper label="Début du premier exercice" value={rhythmStart} min={0} max={Math.max(0, Math.floor(source.durationSec) - 5)} step={5} unit="s" onChange={setRhythmStart} /></div>
-                </div>
-              )}
-              {progress ? (
+              {progress && (
                 <div role="status" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <span className={s.msg}>{progress.label}…</span>
                   <progress max={1} {...(progress.ratio === null ? {} : { value: progress.ratio })} style={{ width: '100%', height: 12 }} aria-label="Analyse en cours" />
-                  <Button onClick={() => abort.current?.abort()}>Annuler l'analyse</Button>
+                  <Button onClick={() => abort.current?.abort()}>Annuler</Button>
                 </div>
-              ) : (
-                <div className={s.actions}>
-                  <Button onClick={() => void analyze()} disabled={!useShots && !useAudio && !useRhythm}>Analyser</Button>
-                  </div>
               )}
               {notes.map((n) => <p key={n} className={ui.hint} style={{ margin: 0 }}>{n}</p>)}
               {aiOn && !aiProposals && (

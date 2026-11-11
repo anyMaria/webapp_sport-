@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { JokerUse, SessionLog } from '../data/types'
-import { computeStreak, effectiveSessions, weekDays } from './streak'
+import { weekStatusLine, computeStreak, effectiveSessions, weekDays } from './streak'
 import { monthKey, weekKey, weekStart } from './weeks'
 
 const OPTS = (now: string) => ({ weeklyGoal: 2, jokersPerMonth: 1, now: new Date(now) })
@@ -140,5 +140,42 @@ describe('pastilles de la semaine', () => {
   })
   it('clé de mois', () => {
     expect(monthKey(new Date(2026, 0, 31))).toBe('2026-01')
+  })
+})
+
+describe('objectif : 3 séances dont 2 dans l\'app, sport ailleurs compris', () => {
+  const log = (day: string) => ({ id: day, workoutId: 'w', startedAt: `${day}T10:00:00`, endedAt: `${day}T10:10:00`, activeSec: 600, plannedSec: 600, extensions: 0, isExpress: false, counted: true })
+  const goal = (now: string, logs: ReturnType<typeof log>[], externalDays: string[]) =>
+    computeStreak(logs, [], { weeklyGoal: 3, minInApp: 2, externalDays, jokersPerMonth: 1, now: new Date(now) })
+
+  it('2 séances dans l\'app + 1 sport ailleurs valident la semaine', () => {
+    const r = goal('2026-11-15T12:00:00', [log('2026-11-09'), log('2026-11-11')], ['2026-11-14'])
+    expect(r.current.validated).toBe(true)
+    expect(r.current.inApp).toBe(2)
+    expect(r.current.count).toBe(3)
+    expect(r.streak).toBe(1)
+  })
+  it('1 séance dans l\'app + 2 sports ailleurs : 3 au total mais pas assez dans l\'app', () => {
+    const r = goal('2026-11-15T12:00:00', [log('2026-11-09')], ['2026-11-12', '2026-11-14'])
+    expect(r.current.validated).toBe(false)
+    expect(r.current.deficit).toBe(1)
+  })
+  it('3 sports ailleurs sans l\'app : rien d\'assez', () => {
+    expect(goal('2026-11-15T12:00:00', [], ['2026-11-10', '2026-11-12', '2026-11-14']).current.validated).toBe(false)
+  })
+  it('un jour avec plusieurs sports ne compte qu\'une fois', () => {
+    const r = goal('2026-11-15T12:00:00', [log('2026-11-09'), log('2026-11-10')], ['2026-11-14', '2026-11-14'])
+    expect(r.current.count).toBe(3)
+  })
+  it('joker : une semaine à une séance de la validation est sauvée, pas deux', () => {
+    const jokered = goal('2026-11-18T12:00:00', [log('2026-11-09'), log('2026-11-10')], [])
+    expect(jokered.weeks[0]!.jokered).toBe(true)
+    expect(jokered.streak).toBe(1)
+    const broken = goal('2026-11-18T12:00:00', [log('2026-11-09')], [])
+    expect(broken.streak).toBe(0)
+  })
+  it('phrase d\'état', () => {
+    const r = goal('2026-11-15T12:00:00', [log('2026-11-09')], ['2026-11-12'])
+    expect(weekStatusLine(r.current, 2)).toBe("Il te manque 1 séance, dont 1 dans l'app.")
   })
 })

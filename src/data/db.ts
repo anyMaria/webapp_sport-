@@ -48,7 +48,10 @@ export async function loadSettings(d: AppDB = db): Promise<Settings> {
   // Fusion avec les valeurs par défaut : un réglage ajouté plus tard ne casse pas une ancienne base.
   const { id: _id, ...rest } = row ?? { id: 'main' as const }
   void _id
-  return { ...DEFAULT_SETTINGS, ...rest }
+  const merged = { ...DEFAULT_SETTINGS, ...rest }
+  // Ancienne base (objectif de 2 séances, sans minimum dans l'app) : le nouvel objectif est 3 séances dont 2 dans l'app.
+  if (row && (rest as Partial<Settings>).minInApp === undefined) return { ...merged, weeklyGoal: DEFAULT_SETTINGS.weeklyGoal, minInApp: DEFAULT_SETTINGS.minInApp }
+  return merged
 }
 
 export async function saveSettings(patch: Partial<Settings>, d: AppDB = db): Promise<void> {

@@ -54,3 +54,4 @@
 .navTitle { font-family: var(--font-title); font-weight: 600; font-size: 20px; color: var(--text); }
 .phrase { font-size: 15px !important; }
 .slotLine { margin: 6px 0 0; font-size: 15px; font-weight: 600; color: var(--transition); }
+.dotExt { background: var(--transition); border-color: var(--transition); color: var(--on-accent); }

@@ -8,6 +8,7 @@ import { syncUnlocks } from '../stickers/sync'
 
 const NO_LOGS: SessionLog[] = []
 const NO_JOKERS: JokerUse[] = []
+const NO_DAYS: string[] = []
 
 /** Date courante, rafraîchie chaque minute (changement de jour ou de semaine pendant que l'app est ouverte). */
 export function useNow(): Date {
@@ -31,8 +32,9 @@ export function useMotivation(): Motivation {
   const settings = useLiveQuery(() => loadSettings(), []) ?? DEFAULT_SETTINGS
   const logs = useLiveQuery(() => db.sessionLogs.toArray(), []) ?? NO_LOGS
   const jokers = useLiveQuery(() => db.jokerUses.toArray(), []) ?? NO_JOKERS
+  const external = useLiveQuery(async () => (await db.activities.toArray()).map((a) => a.date), []) ?? NO_DAYS
   const now = useNow()
-  const result = computeStreak(logs, jokers, { weeklyGoal: settings.weeklyGoal, jokersPerMonth: settings.jokersPerMonth, now })
+  const result = computeStreak(logs, jokers, { weeklyGoal: settings.weeklyGoal, minInApp: settings.minInApp, externalDays: external, jokersPerMonth: settings.jokersPerMonth, now })
   const pending = result.newJokerUses.map((j) => `${j.monthKey}/${j.weekKey}`).join(',')
   useEffect(() => {
     if (pending) void db.jokerUses.bulkPut(result.newJokerUses)
@@ -40,7 +42,7 @@ export function useMotivation(): Motivation {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending])
   // Déblocages de stickers : recalculés quand le journal ou la série change (idempotent).
-  const unlockKey = `${result.validatedWeeks.join(',')}|${result.streak}|${logs.length}`
+  const unlockKey = `${result.validatedWeeks.join(',')}|${result.streak}|${logs.length}|${external.length}`
   useEffect(() => {
     void syncUnlocks()
   }, [unlockKey])

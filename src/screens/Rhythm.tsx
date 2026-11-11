@@ -120,13 +120,16 @@ export function Rhythm() {
                 <Button variant="primary" disabled={!sport.trim()} onClick={() => void save()}>Ajouter ce sport</Button>
                 <Button onClick={() => setPicked(null)}>Fermer</Button>
               </div>
-              <span className={ui.hint}>Ces sports s'affichent dans le calendrier mais ne comptent pas pour ta série.</span>
+              <span className={ui.hint}>Un jour avec du sport fait ailleurs compte pour ton objectif de la semaine (une fois par jour).</span>
             </div>
           )}
           <div className={r.streakRow}>
             <span className={r.streak}>{result.streak}</span>
-            <span className={r.streakText}>semaine{result.streak > 1 ? 's' : ''} d'affilée<br /><span className={ui.hint}>Objectif : {settings.weeklyGoal} séances par semaine</span></span>
+            <span className={r.streakText}>semaine{result.streak > 1 ? 's' : ''} d'affilée</span>
           </div>
+          <Row label="Séances par semaine" hint="Dans l'app ou ailleurs"><Stepper unit="" label="Séances par semaine" value={settings.weeklyGoal} min={1} max={7} step={1} onChange={(v) => void saveSettings({ weeklyGoal: v, minInApp: Math.min(settings.minInApp, v) })} /></Row>
+          <Row label="dont dans l'app" hint="Au moins"><Stepper unit="" label="Séances minimum dans l'app" value={settings.minInApp} min={0} max={settings.weeklyGoal} step={1} onChange={(v) => void saveSettings({ minInApp: v })} /></Row>
+          <p className={ui.hint} style={{ margin: 0 }}>Objectif : {settings.weeklyGoal} séances par semaine, dont au moins {settings.minInApp} dans l'app. Le sport noté dans le calendrier compte pour le reste.</p>
           {message && <p role="status" className={[s.msg, s.msgOk].join(' ')}>{message}</p>}
           <div className={r.note}>Joker : une fois par mois, une semaine à 1 séance compte quand même.</div>
         </section>

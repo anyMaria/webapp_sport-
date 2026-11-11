@@ -26,8 +26,8 @@ async function readFlags(): Promise<UnlockFlags> {
 
 /** Écrit les déblocages dus. Idempotent, et sérialisé par une transaction pour éviter un double tirage. */
 export async function syncUnlocks(now = new Date()): Promise<StickerUnlock[]> {
-  const [settings, logs, jokers, flags] = await Promise.all([loadSettings(), db.sessionLogs.toArray(), db.jokerUses.toArray(), readFlags()])
-  const result = computeStreak(logs, jokers, { weeklyGoal: settings.weeklyGoal, jokersPerMonth: settings.jokersPerMonth, now })
+  const [settings, logs, jokers, flags, acts] = await Promise.all([loadSettings(), db.sessionLogs.toArray(), db.jokerUses.toArray(), readFlags(), db.activities.toArray()])
+  const result = computeStreak(logs, jokers, { weeklyGoal: settings.weeklyGoal, minInApp: settings.minInApp, externalDays: acts.map((a) => a.date), jokersPerMonth: settings.jokersPerMonth, now })
   return db.transaction('rw', db.stickerUnlocks, async () => {
     // Anciens stickers qui ne sont plus au catalogue (remplacés par les dessins de l'utilisatrice) : retirés, la pochette est retirée au sort.
     const all = await db.stickerUnlocks.toArray()

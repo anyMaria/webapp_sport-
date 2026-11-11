@@ -21,7 +21,7 @@ import { Screen } from '../app/Screen'
 import { useMotivation } from '../motivation/useMotivation'
 import { PouchReveal } from '../stickers/PouchReveal'
 import { markRevealed } from '../stickers/sync'
-import { remainingThisWeek } from '../motivation/streak'
+import { weekStatusLine } from '../motivation/streak'
 import s from './session.module.css'
 
 const MODES: { id: AudioMode; label: string }[] = [
@@ -166,9 +166,7 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
         </div>
         <p className={s.hint}>{counted ? 'Cette séance compte pour ta semaine.' : 'Cette séance est trop courte pour compter. Pas de souci, on repart quand tu veux.'}</p>
         <p role="status" style={{ margin: 0, fontSize: 20, fontFamily: 'var(--font-title)', fontWeight: 600 }}>
-          {mot.result.current.validated
-            ? `${mot.result.current.count} / ${mot.settings.weeklyGoal}, semaine validée`
-            : `${mot.result.current.count} / ${mot.settings.weeklyGoal} : encore ${remainingThisWeek(mot.result, mot.settings.weeklyGoal)} séance${remainingThisWeek(mot.result, mot.settings.weeklyGoal) > 1 ? 's' : ''} cette semaine`}
+          {`${mot.result.current.count} / ${mot.settings.weeklyGoal} · ${weekStatusLine(mot.result.current, mot.settings.minInApp)}`}
         </p>
         {(() => {
           const wk = mot.result.current.key

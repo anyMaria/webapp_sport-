@@ -33,8 +33,14 @@ export interface WeekSummary {
   count: number
   validated: boolean
   jokered: boolean
-  /** Jours (0 = lundi) où une séance a été comptée. */
+  /** Jours (0 = lundi) où une séance a été comptée dans l'app. */
   days: number[]
+  /** Jours (0 = lundi) où un sport fait ailleurs a été noté. */
+  externalDays: number[]
+  /** Séances comptées dans l'app. */
+  inApp: number
+  /** Ce qui manque pour valider : au moins l'objectif au total ET le minimum dans l'app. 0 = validée. */
+  deficit: number
 }
 
 export interface StreakResult {
@@ -54,14 +60,15 @@ export interface StreakResult {
  * Calcul de la série, par une fonction pure à partir du journal.
  * - Série = semaines validées consécutives en remontant depuis la dernière semaine terminée ; la semaine en cours
  *   s'ajoute dès qu'elle est validée, et ne casse rien tant qu'elle ne l'est pas.
- * - Joker : un par mois civil. Une semaine terminée à exactement 1 séance comptée, joker du mois libre → il s'applique
- *   tout seul, la série continue, sans pochette pour cette semaine.
- * - 0 séance, ou 1 séance sans joker : série à zéro.
+ * - Semaine validée : au moins `weeklyGoal` séances au total (app + sport fait ailleurs), dont au moins `minInApp` dans l'app.
+ * - Joker : un par mois civil. Une semaine terminée à une séance de la validation (au moins une faite), joker du mois
+ *   libre → il s'applique tout seul, la série continue, sans pochette pour cette semaine.
+ * - Rien de fait, ou plus d'une séance manquante, ou pas de joker : série à zéro.
  */
 export function computeStreak(
   logs: SessionLog[],
   jokerUses: JokerUse[],
-  opts: { weeklyGoal: number; jokersPerMonth: number; now: Date },
+  opts: { weeklyGoal: number; jokersPerMonth: number; now: Date; minInApp?: number; externalDays?: string[] },
 ): StreakResult {
   const eff = effectiveSessions(logs)
   const byWeek = new Map<string, number[]>()
@@ -70,9 +77,18 @@ export function computeStreak(
     const k = weekKey(d)
     byWeek.set(k, [...(byWeek.get(k) ?? []), (d.getDay() + 6) % 7])
   }
+  // Sport fait ailleurs : un jour compte une fois, quel que soit le nombre de sports notés ce jour-là.
+  const minInApp = opts.minInApp ?? 0
+  const extByWeek = new Map<string, number[]>()
+  const extDates = [...new Set(opts.externalDays ?? [])].map((k) => { const [y, m, d] = k.split('-').map(Number); return new Date(y!, m! - 1, d!) })
+  for (const d of extDates) {
+    const k = weekKey(d)
+    extByWeek.set(k, [...(extByWeek.get(k) ?? []), (d.getDay() + 6) % 7])
+  }
   const currentMonday = weekStart(opts.now)
   const currentKey = weekKey(currentMonday)
-  const first = eff.length ? weekStart(new Date(eff[0]!.startedAt)) : currentMonday
+  const firstDates = [...(eff.length ? [new Date(eff[0]!.startedAt)] : []), ...extDates].sort((a, b) => a.getTime() - b.getTime())
+  const first = firstDates.length ? weekStart(firstDates[0]!) : currentMonday
 
   const usedByWeek = new Map(jokerUses.map((j) => [j.weekKey, j]))
   const jokersInMonth = new Map<string, number>()
@@ -88,9 +104,12 @@ export function computeStreak(
   for (let m = first; m <= currentMonday; m = addDays(m, 7)) {
     const key = weekKey(m)
     const days = byWeek.get(key) ?? []
-    const count = days.length
+    const externalDays = extByWeek.get(key) ?? []
+    const inApp = days.length
+    const count = inApp + externalDays.length
+    const deficit = Math.max(opts.weeklyGoal - count, minInApp - inApp, 0)
     const isCurrent = key === currentKey
-    const base: WeekSummary = { key, monday: m, count, validated: count >= opts.weeklyGoal, jokered: false, days }
+    const base: WeekSummary = { key, monday: m, count, validated: deficit === 0, jokered: false, days, externalDays, inApp, deficit }
     if (isCurrent) {
       if (base.validated) { streak++; validatedWeeks.push(key) }
       weeks.push(base)
@@ -101,7 +120,7 @@ export function computeStreak(
     if (base.validated) {
       streak++
       validatedWeeks.push(key)
-    } else if (count === 1) {
+    } else if (deficit === 1 && count >= 1) {
       const month = jokerMonthOf(m)
       const already = usedByWeek.get(key)
       if (already) {
@@ -131,9 +150,9 @@ export function computeStreak(
 }
 
 /** Séances qui manquent pour valider la semaine en cours. */
-export const remainingThisWeek = (r: StreakResult, goal: number) => Math.max(0, goal - r.current.count)
+export const remainingThisWeek = (r: StreakResult) => r.current.deficit
 
-export type DayState = 'done' | 'today' | 'slot' | 'empty'
+export type DayState = 'done' | 'external' | 'today' | 'slot' | 'empty'
 
 /** Sept pastilles de la semaine : faite, aujourd'hui, créneau prévu, vide. */
 export function weekDays(current: WeekSummary, now: Date, slotDays: number[]): { label: string; state: DayState }[] {
@@ -143,8 +162,19 @@ export function weekDays(current: WeekSummary, now: Date, slotDays: number[]): {
     const jsDay = (i + 1) % 7 // 1 = lundi … 0 = dimanche, comme settings.slot.days
     let state: DayState = 'empty'
     if (current.days.includes(i)) state = 'done'
+    else if (current.externalDays.includes(i)) state = 'external'
     else if (i === today) state = 'today'
     else if (slotDays.includes(jsDay) && i > today) state = 'slot'
     return { label, state }
   })
+}
+
+/** Phrase d'état de la semaine : ce qui manque, en distinguant les séances de l'app et le sport fait ailleurs. */
+export function weekStatusLine(w: WeekSummary, minInApp: number): string {
+  if (w.deficit === 0) return 'Semaine validée.'
+  const needApp = Math.max(0, minInApp - w.inApp)
+  const n = w.deficit
+  const plural = n > 1 ? 's' : ''
+  if (needApp > 0) return `Il te manque ${n} séance${plural}, dont ${needApp} dans l'app.`
+  return `Il te manque ${n} séance${plural} : dans l'app ou ailleurs, comme tu veux.`
 }

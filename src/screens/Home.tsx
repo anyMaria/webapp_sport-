@@ -1,14 +1,14 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check, Flame, Play, Plus, Film } from 'lucide-react'
+import { Check, Dumbbell, Flame, Play, Plus, Film } from 'lucide-react'
 import { db } from '../data/db'
 import { Thumb } from '../library/Thumb'
 import { formatDuration, workoutDurationSec } from '../library/workouts'
 import { composeExpress } from '../motivation/express'
 import { motivationPhrase, phraseSeed } from '../motivation/phrases'
 import { sessionsUntilNextPouch } from '../stickers/schedule'
-import { remainingThisWeek, weekDays } from '../motivation/streak'
+import { weekDays, weekStatusLine } from '../motivation/streak'
 import { streakMessage, useMotivation } from '../motivation/useMotivation'
 import { originText, type Exercise, type VideoSource, type Workout } from '../data/types'
 import { APP_NAME } from '../lib/constants'
@@ -49,7 +49,6 @@ export function Home() {
     : nextSlotDay !== undefined ? `Prochain créneau : ${DAYS[nextSlotDay]} à ${hhmm(settings.slot.time)}.` : 'Choisis tes jours de créneau dans « Mon rythme ».'
   const msg = streakMessage(result)
   const phrase = motivationPhrase({ slotToday, streak: result.streak, weekDone: result.current.validated }, phraseSeed(now))
-  const left = remainingThisWeek(result, settings.weeklyGoal)
   const days = weekDays(result.current, now, settings.slot.days)
   const pct = Math.min(100, Math.round((result.current.count / settings.weeklyGoal) * 100))
 
@@ -102,12 +101,14 @@ export function Home() {
               <span className={h.eyebrow} style={{ color: 'var(--text-muted)' }}>Cette semaine</span>
               <p className={h.slotLine}>{slotLine}</p>
               <div><span className={h.big}>{result.current.count} / {settings.weeklyGoal}</span><span className={h.unit}>séances</span></div>
+              <span className={h.hint}>dont {Math.min(result.current.inApp, settings.minInApp)} / {settings.minInApp} dans l'app, le reste ici ou ailleurs</span>
             </div>
             <div className={h.days} role="list" aria-label="Jours de la semaine">
               {days.map((d, i) => (
                 <div key={i} className={h.day} role="listitem">
-                  <div className={[h.dot, d.state === 'done' ? h.dotDone : d.state === 'today' ? h.dotToday : d.state === 'slot' ? h.dotSlot : ''].join(' ')}>
-                    {d.state === 'done' && <Check size={18} strokeWidth={3} aria-label="Séance faite" />}
+                  <div className={[h.dot, d.state === 'done' ? h.dotDone : d.state === 'external' ? h.dotExt : d.state === 'today' ? h.dotToday : d.state === 'slot' ? h.dotSlot : ''].join(' ')}>
+                    {d.state === 'done' && <Check size={18} strokeWidth={3} aria-label="Séance faite dans l'app" />}
+                    {d.state === 'external' && <Dumbbell size={18} aria-label="Sport fait ailleurs" />}
                   </div>
                   <span>{d.label}</span>
                 </div>
@@ -115,7 +116,7 @@ export function Home() {
             </div>
             <div>
               <div className={h.track} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progression de la semaine"><div className={h.fill} style={{ width: `${pct}%` }} /></div>
-              <span className={h.hint}>{left === 0 ? 'Semaine validée. ' : ''}{untilPouch === 1 ? 'Ta prochaine pochette : à la prochaine séance !' : `Prochaine pochette dans ${untilPouch} séances`}</span>
+              <span className={h.hint}>{weekStatusLine(result.current, settings.minInApp)} {untilPouch === 1 ? 'Ta prochaine pochette : à la prochaine séance !' : `Prochaine pochette dans ${untilPouch} séances`}</span>
             </div>
           </div>
         </section>

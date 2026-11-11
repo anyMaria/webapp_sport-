@@ -74,7 +74,8 @@ export interface JokerUse {
 export type AudioMode = 'music' | 'music+beeps' | 'music+beeps+voice' | 'video'
 
 export interface Settings {
-  weeklyGoal: number // 2
+  weeklyGoal: number // 3 : séances par semaine, app et sport fait ailleurs
+  minInApp: number // 2 : dont au moins autant dans l'app
   jokersPerMonth: number // 1
   slot: { days: number[]; time: string; durationMin: number } // ex. [1,2,4], "19:00", 15
   audioMode: AudioMode

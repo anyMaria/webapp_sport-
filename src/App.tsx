@@ -2,8 +2,8 @@ import { Route, Routes } from 'react-router-dom'
 import { Lab } from './lab/Lab'
 import { Home } from './screens/Home'
 import { Settings } from './screens/Settings'
-import { Soon } from './screens/Soon'
 import { Rhythm } from './screens/Rhythm'
+import { Collection } from './screens/Collection'
 import { Demo } from './screens/Demo'
 import { Import } from './screens/Import'
 import { Split } from './screens/Split'
@@ -21,7 +21,7 @@ export function App() {
       <Route path="/import" element={<Import />} />
       <Route path="/decoupage/:sourceId" element={<Split />} />
       <Route path="/mon-rythme" element={<Rhythm />} />
-      <Route path="/collection" element={<Soon title="Collection" phase={7} text="Tes stickers et la révélation des pochettes." />} />
+      <Route path="/collection" element={<Collection />} />
       <Route path="/demo" element={<Demo />} />
       <Route path="/seance/:workoutId" element={<SessionScreen />} />
       <Route path="/lab" element={<Lab />} />

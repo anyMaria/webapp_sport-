@@ -134,3 +134,28 @@ Pour tester la série sans attendre des semaines, regarde d'abord l'accueil et �
 Pas de notification : le rappel passe par le calendrier (plan). Pour tester la série sur plusieurs semaines sans attendre, tu peux me demander un jeu de données d'essai.
 
 Déjà vérifié : 31 tests automatiques (série sur tous les cas limites, y compris dans trois fuseaux horaires dont changement d'heure ; limites par jour et express ; export .ics : récurrence, heure flottante, alarme, longues lignes ; composition express). Accueil et « Mon rythme » affichés dans un navigateur avec des données d'essai, fichier .ics généré.
+
+## Phase 7 : collection et révélation
+
+Pour voir la révélation sans attendre une semaine validée : Réglages, « Page de tests (/lab) », tout en bas « Révélation d'une pochette », trois boutons (sticker courant, rare, brillant). Ça ne touche pas à ta collection. Fais-le avec Spotify en lecture, et sur l'iPad installé.
+
+| # | Action | Résultat attendu |
+|---|---|---|
+| 7.1 | Lance « Rejouer (sticker courant) ». | Fond sombre, pochette métallisée qui flotte, reflet qui la traverse, texte « Semaine validée. Maintiens pour ouvrir. » |
+| 7.2 | Appuie sur la pochette et relâche tout de suite (moins d'une seconde). | Elle tremble un peu, une lueur monte, puis elle retombe doucement. Rien ne s'ouvre. |
+| 7.3 | Maintiens environ 1,2 s. | Elle tremble de plus en plus, une lueur monte, puis éclair bref, les deux moitiés s'écartent et sortent de l'écran, une gerbe de particules part. |
+| 7.4 | Juste après l'ouverture. | Le sticker monte en tournant sur lui-même (un tour), dépasse un peu sa taille puis se pose. Un carillon de deux notes joue au volume des bips. **Spotify ne doit pas couper.** |
+| 7.5 | Glisse le doigt sur le sticker. | Il s'incline jusqu'à 14° et son reflet arc-en-ciel se déplace. Retour élastique quand tu lèves le doigt. **Dis-moi si le reflet est assez visible** (il est discret). |
+| 7.6 | Touche « Ouvrir » au lieu de maintenir. | Même ouverture. L'iPad peut demander l'accès à l'orientation : refuse, le doigt suffit ; accepte, l'inclinaison de l'iPad doit aussi faire bouger le reflet. |
+| 7.7 | Touche « Passer » sur la pochette. | Le sticker apparaît directement. |
+| 7.8 | « Rejouer (sticker rare) » et « brillant ». | Le rare a un halo et un reflet plus intense ; le brillant a un reflet doré. Le nom et la série s'affichent en dessous. |
+| 7.9 | Fluidité de toute la séquence. | Aucune saccade (objectif 60 images par seconde). **Note ce qui saccade**, c'est ce qui compte le plus pour cette phase. |
+| 7.10 | Réglages iPad : Accessibilité, Animations réduites activées, puis rejoue. | Pas de secousse : un simple fondu vers le sticker. Le bouton « Passer » reste présent. |
+| 7.11 | Touche « Coller dans ma collection » (depuis la page de test). | Le sticker disparaît vers le coin. Dans la vraie collection, il file vers son emplacement, s'écrase légèrement et le compteur monte. |
+| 7.12 | Collection (accueil, « Collection »). | Quatre planches (Ciel de nuit, Petits rituels, Pierres, Bonus), emplacements vides en silhouette avec leur condition de déblocage. |
+| 7.13 | Touche un sticker obtenu. | Il s'agrandit et le miroitement se rejoue. |
+| 7.14 | Valide une vraie semaine (2 séances comptées). | À la fin de la 2e séance : bouton « Ouvrir ma pochette ». L'accueil et la collection affichent une pastille tant que la pochette n'est pas ouverte, sans limite de temps. |
+| 7.15 | Premier découpage enregistré, première séance mêlant deux vidéos, premier « Encore ». | Chaque événement ajoute une pochette bonus (Ciseaux dorés, Mixtape, Boucle infinie). |
+| 7.16 | Les dessins. | Dis-moi s'ils te conviennent comme emplacements provisoires. Tu les remplaceras par les tiens (mêmes noms de fichiers dans `src/stickers/art/`). |
+
+Déjà vérifié sur ordinateur : 11 tests automatiques (catalogue de 24 stickers, tirage sans doublon, doublons brillants, une pochette par semaine, paliers de série, bonus, pas de double déblocage). Séquence jouée dans un navigateur : maintien trop court qui retombe, ouverture, apparition, inclinaison, collage, compteur. **La fluidité à 60 images par seconde n'est pas mesurée : seul l'iPad peut le dire.**

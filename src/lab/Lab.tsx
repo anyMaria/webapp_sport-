@@ -9,6 +9,8 @@ import { T4WakeLock } from './T4WakeLock'
 import { T5Storage } from './T5Storage'
 import { T6Loop } from './T6Loop'
 import { T7Analysis } from './T7Analysis'
+import { PouchReveal } from '../stickers/PouchReveal'
+import { WEEKLY_POOL } from '../stickers/catalog'
 import s from './lab.module.css'
 
 const yn = (b: boolean) => (b ? 'oui' : 'non')
@@ -44,6 +46,7 @@ function buildReport(): string {
 export function Lab() {
   const [report, setReport] = useState('')
   const [flash, setFlash] = useState(false)
+  const [preview, setPreview] = useState<string | null>(null)
 
   return (
     <main className={s.page}>
@@ -72,6 +75,17 @@ export function Lab() {
       <T5Storage />
       <T6Loop />
       <T7Analysis />
+
+      <section className={s.card} aria-labelledby="rev-h">
+        <h2 id="rev-h">Révélation d'une pochette (phase 7)</h2>
+        <p className={s.muted}>Rejoue l'animation sans toucher à ta collection. Vérifie la fluidité sur l'iPad.</p>
+        <div className={s.actions}>
+          <Btn primary onClick={() => setPreview(WEEKLY_POOL[Math.floor(Math.random() * WEEKLY_POOL.length)]!)}>Rejouer (sticker courant)</Btn>
+          <Btn onClick={() => setPreview('etoile-polaire')}>Rejouer (sticker rare)</Btn>
+          <Btn onClick={() => setPreview('saturne:brillant')}>Rejouer (brillant)</Btn>
+        </div>
+      </section>
+      {preview && <PouchReveal key={preview} stickerId={preview} volume={0.5} onDone={() => setPreview(null)} />}
 
       <section className={s.copy} aria-labelledby="rep-h">
         <h2 id="rep-h">Rapport</h2>

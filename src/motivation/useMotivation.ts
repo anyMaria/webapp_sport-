@@ -4,6 +4,7 @@ import { db, loadSettings } from '../data/db'
 import { DEFAULT_SETTINGS } from '../data/settings'
 import type { JokerUse, SessionLog, Settings } from '../data/types'
 import { computeStreak, type StreakResult } from './streak'
+import { syncUnlocks } from '../stickers/sync'
 
 const NO_LOGS: SessionLog[] = []
 const NO_JOKERS: JokerUse[] = []
@@ -38,6 +39,11 @@ export function useMotivation(): Motivation {
     // Écrit une fois les jokers dus ; le calcul suivant les relit depuis la base.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending])
+  // Déblocages de stickers : recalculés quand le journal ou la série change (idempotent).
+  const unlockKey = `${result.validatedWeeks.join(',')}|${result.streak}|${logs.length}`
+  useEffect(() => {
+    void syncUnlocks()
+  }, [unlockKey])
   return { settings, logs, result, now }
 }
 

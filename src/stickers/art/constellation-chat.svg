@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<g>
+<path d="M130 170 L170 90 L230 150 L290 150 L350 90 L390 170 L400 280 Q256 450 112 280 Z" fill="#F6F4EC" stroke="#F6F4EC" stroke-width="44" stroke-linejoin="round" />
+<circle cx="205" cy="240" r="16" fill="#F6F4EC" stroke="#F6F4EC" stroke-width="44" stroke-linejoin="round" />
+<circle cx="307" cy="240" r="16" fill="#F6F4EC" stroke="#F6F4EC" stroke-width="44" stroke-linejoin="round" />
+<path d="M240 300 L256 316 L272 300 Z" fill="#F6F4EC" stroke="#F6F4EC" stroke-width="44" stroke-linejoin="round" />
+<circle cx="170" cy="100" r="9" fill="#F6F4EC" stroke="#F6F4EC" stroke-width="44" stroke-linejoin="round" />
+<circle cx="350" cy="100" r="9" fill="#F6F4EC" stroke="#F6F4EC" stroke-width="44" stroke-linejoin="round" />
+</g>
+<g>
+<path d="M130 170 L170 90 L230 150 L290 150 L350 90 L390 170 L400 280 Q256 450 112 280 Z" fill="#2E3A87" />
+<circle cx="205" cy="240" r="16" fill="#FFD479" />
+<circle cx="307" cy="240" r="16" fill="#FFD479" />
+<path d="M240 300 L256 316 L272 300 Z" fill="#FFB27A" />
+<circle cx="170" cy="100" r="9" fill="#FFFFFF" />
+<circle cx="350" cy="100" r="9" fill="#FFFFFF" />
+</g>
+</svg>

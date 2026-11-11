@@ -25,3 +25,8 @@ Décisions prises par Claude Code quand le plan ne tranchait pas. Option la plus
 | 6 | Prénom : réglage libre (vide par défaut), pas de prénom écrit dans le code. | Donnée personnelle ; la maquette montre un prénom mais le plan parle seulement de salutation. |
 | 6 | Séance express : si aucune séance n'est marquée express, premiers exercices de la séance du jour jusqu'à 3 minutes et 4 exercices (`composeExpress`). | Hypothèse du plan à confirmer. |
 | 6 | « Séance du jour » : séance choisie pour le créneau, sinon dernière utilisée, sinon la plus récente. | Le plan le décrit ainsi ; le choix se fait dans « Mon rythme ». |
+| 7 | Pochette tirée au moment où la semaine est validée (pas à l'ouverture) ; fermer la fenêtre après l'ouverture compte comme « collé ». | Ouvrir deux fois la même pochette donne toujours le même sticker ; aucune pochette perdue. |
+| 7 | Doublons brillants nommés `{id}:brillant`, puis `:brillant2`, etc. quand les 16 stickers sont obtenus. | Le plan prévoit un doublon doré sans préciser la suite. |
+| 7 | Dessins SVG générés par un script, simples, contour clair épais. À remplacer par les illustrations de l'utilisatrice, mêmes noms de fichiers dans `src/stickers/art/`. | Prévu par le plan. |
+| 7 | Reflet holographique volontairement discret (opacité réduite) : la pleine intensité écrasait les couleurs du dessin. | À régler selon ton avis, dans `reveal.module.css` (`.rainbow`). |
+| 7 | Pochette : aplats sans dégradé, avec un reflet qui la traverse. | Le plan exclut les dégradés décoratifs hors reflet des stickers. |

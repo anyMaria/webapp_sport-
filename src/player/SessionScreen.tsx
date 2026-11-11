@@ -18,6 +18,8 @@ import { useWakeLock } from './useWakeLock'
 import { Button } from '../ui/Button'
 import { Screen } from '../app/Screen'
 import { useMotivation } from '../motivation/useMotivation'
+import { PouchReveal } from '../stickers/PouchReveal'
+import { markRevealed } from '../stickers/sync'
 import { remainingThisWeek } from '../motivation/streak'
 import s from './session.module.css'
 
@@ -66,6 +68,8 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
   const { session, init, dispatch } = useSessionStore()
   const [confirmQuit, setConfirmQuit] = useState(false)
   const mot = useMotivation()
+  const unlocks = useLiveQuery(() => db.stickerUnlocks.toArray(), []) ?? []
+  const [showPouch, setShowPouch] = useState(false)
   const logged = useRef(false)
 
   useEffect(() => {
@@ -164,7 +168,19 @@ function Player({ plan, startedAtIso }: { plan: Plan; startedAtIso: string }) {
             ? `${mot.result.current.count} / ${mot.settings.weeklyGoal}, semaine validée`
             : `${mot.result.current.count} / ${mot.settings.weeklyGoal} : encore ${remainingThisWeek(mot.result, mot.settings.weeklyGoal)} séance${remainingThisWeek(mot.result, mot.settings.weeklyGoal) > 1 ? 's' : ''} cette semaine`}
         </p>
-        <div><Button variant="primary" onClick={() => nav('/')} style={{ minHeight: 64, fontSize: 20 }}>Terminer</Button></div>
+        {(() => {
+          const wk = mot.result.current.key
+          const pouch = unlocks.find((u) => u.reason === 'week' && u.weekKey === wk && !u.revealed)
+          return (
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {pouch && mot.result.current.validated && <Button variant="primary" onClick={() => setShowPouch(true)} style={{ minHeight: 64, fontSize: 20 }}>Ouvrir ma pochette</Button>}
+              <Button variant={pouch && mot.result.current.validated ? 'secondary' : 'primary'} onClick={() => nav('/')} style={{ minHeight: 64, fontSize: 20 }}>Terminer</Button>
+              {showPouch && pouch && (
+                <PouchReveal stickerId={pouch.stickerId} volume={settings.beepVolume} onDone={(opened) => { if (opened) void markRevealed(pouch.stickerId); setShowPouch(false) }} />
+              )}
+            </div>
+          )
+        })()}
       </main>
     )
   }

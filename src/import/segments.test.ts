@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { adjust, mergeWithNext, splitAt, wholeVideo, type Segment } from './segments'
+import { adjust, fillGaps, mergeWithNext, moveBoundary, splitAt, wholeVideo, type Segment } from './segments'
 
 const seg = (id: string, startSec: number, endSec: number, extra: Partial<Segment> = {}): Segment => ({ id, startSec, endSec, name: id, cue: '', tags: [], kept: true, ...extra })
 
@@ -53,5 +53,38 @@ describe('découpage', () => {
   it('un trou entre deux segments n’est pas rempli', () => {
     const out = adjust([seg('a', 0, 10), seg('b', 15, 30)], 'a', 'end', 0.5, 30)
     expect(out[1]!.startSec).toBe(15)
+  })
+})
+
+describe('coupes à déplacer et segments jointifs', () => {
+  const sg = (startSec: number, endSec: number, extra: Partial<Segment> = {}): Segment => ({ id: `s${startSec}`, startSec, endSec, name: `S${startSec}`, cue: '', tags: [], kept: true, ...extra })
+  it('déplace la coupe pour les deux voisins et lève « à vérifier »', () => {
+    const r = moveBoundary([sg(0, 10, { verify: true }), sg(10, 20)], 0, 12.34)
+    expect(r.map((x) => [x.startSec, x.endSec, !!x.verify])).toEqual([[0, 12.34, false], [12.34, 20, false]])
+  })
+  it('garde au moins 1 s de chaque côté', () => {
+    expect(moveBoundary([sg(0, 10), sg(10, 20)], 0, -5)[0]!.endSec).toBe(1)
+    expect(moveBoundary([sg(0, 10), sg(10, 20)], 0, 99)[1]!.startSec).toBe(19)
+  })
+  it('ne change rien sans voisin', () => {
+    const l = [sg(0, 10)]
+    expect(moveBoundary(l, 0, 5)).toBe(l)
+  })
+  it('referme un trou resté entre deux segments', () => {
+    const r = moveBoundary([sg(0, 9.5), sg(10, 20)], 0, 9.8)
+    expect([r[0]!.endSec, r[1]!.startSec]).toEqual([9.8, 9.8])
+  })
+  it('comble les trous : pause retirée si long, absorbé si court', () => {
+    const r = fillGaps([sg(5, 10), sg(10.4, 20), sg(18, 30)], 31.5)
+    expect(r.map((x) => [x.name, x.startSec, x.endSec, x.kept])).toEqual([
+      ['Pause', 0, 5, false], ['S5', 5, 10.4, true], ['S10.4', 10.4, 20, true], ['S18', 20, 30, true], ['Pause', 30, 31.5, false],
+    ])
+  })
+  it('étire le premier et le dernier segment sur un bout de moins de 1 s', () => {
+    const r = fillGaps([sg(0.4, 10), sg(10, 19.6)], 20)
+    expect(r.map((x) => [x.startSec, x.endSec])).toEqual([[0, 10], [10, 20]])
+  })
+  it('sans segment utilisable : la vidéo entière', () => {
+    expect(fillGaps([], 12).map((x) => [x.startSec, x.endSec])).toEqual([[0, 12]])
   })
 })

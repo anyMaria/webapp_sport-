@@ -11,12 +11,27 @@ export async function aiStatus(): Promise<AiStatus> {
   }
 }
 
+/** Erreur du service d'IA ; `retryAfter` (secondes) est renseigné quand il demande d'attendre avant de réessayer. */
+export class AiError extends Error {
+  retryAfter?: number
+  constructor(message: string, retryAfter?: number) {
+    super(message)
+    this.retryAfter = retryAfter
+  }
+}
+
 export async function aiPost<T>(payload: unknown, signal: AbortSignal): Promise<T> {
   const r = await fetch('/api/ai', { method: 'POST', signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
-  const body = (await r.json().catch(() => ({}))) as T & { error?: string }
-  if (!r.ok) throw new Error(body.error ?? `L'IA n'a pas répondu (code ${r.status}).`)
+  const body = (await r.json().catch(() => ({}))) as T & { error?: string; retryAfter?: number }
+  if (!r.ok) throw new AiError(body.error ?? `L'IA n'a pas répondu (code ${r.status}).`, r.status === 429 ? (body.retryAfter ?? 10) : undefined)
   return body
 }
+
+/** Attente annulable. */
+export const wait = (ms: number, signal: AbortSignal) => new Promise<void>((res, rej) => {
+  const t = window.setTimeout(res, ms)
+  signal.addEventListener('abort', () => { window.clearTimeout(t); rej(new DOMException('Annulé', 'AbortError')) }, { once: true })
+})
 
 /** Ouvre une vidéo cachée pour y prendre des images ; `done()` libère l'adresse temporaire. */
 export async function openHiddenVideo(file: Blob): Promise<{ v: HTMLVideoElement; done: () => void }> {
